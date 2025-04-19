@@ -2,16 +2,19 @@ import React, { useState, useEffect, useCallback } from 'react';
 import './App.css';
 
 const API_KEY = process.env.REACT_APP_TMDB_API_KEY;
-const API_BASE_URL = "https://api.themoviedb.org/3";
-const POSTER_BASE_URL = "https://image.tmdb.org/t/p/w300";
+const API_BASE_URL = 'https://api.themoviedb.org/3';
+const POSTER_BASE_URL = 'https://image.tmdb.org/t/p/w300';
 
 function App() {
-  const [startMovie, setStartMovie] = useState("");
-  const [targetMovie, setTargetMovie] = useState("");
+  // Movie & game state
+  const [startMovie, setStartMovie] = useState('');
+  const [targetMovie, setTargetMovie] = useState('');
   const [currentMovie, setCurrentMovie] = useState(null);
   const [selectedActor, setSelectedActor] = useState(null);
   const [gameChain, setGameChain] = useState([]);
-  const [gameState, setGameState] = useState("setup"); // setup, playing, complete
+  const [gameState, setGameState] = useState('setup'); // setup, playing, complete
+
+  // UI state
   const [cast, setCast] = useState([]);
   const [filmography, setFilmography] = useState([]);
   const [searchStartResults, setSearchStartResults] = useState([]);
@@ -19,7 +22,11 @@ function App() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  // Search for movies based on title
+  // ** New state for shortest‑path display **
+  const [initialChain, setInitialChain] = useState(null);
+  const [hintChain, setHintChain] = useState(null);
+
+  // Search for movies
   const searchMovies = async (query, setResults) => {
     if (!query.trim()) {
       setResults([]);
@@ -27,30 +34,29 @@ function App() {
     }
     setIsLoading(true);
     try {
-      const response = await fetch(
+      const res = await fetch(
         `${API_BASE_URL}/search/movie?api_key=${API_KEY}&query=${encodeURIComponent(query)}&include_adult=false`
       );
-      const data = await response.json();
+      const data = await res.json();
       setResults(data.results.slice(0, 5));
     } catch (err) {
-      setError("Failed to search movies");
+      setError('Failed to search movies');
       console.error(err);
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Fetch movie details including cast
+  // Fetch movie details + credits
   const fetchMovieDetails = async (movieId) => {
     setIsLoading(true);
     try {
-      const response = await fetch(
+      const res = await fetch(
         `${API_BASE_URL}/movie/${movieId}?api_key=${API_KEY}&append_to_response=credits`
       );
-      const data = await response.json();
-      return data;
+      return await res.json();
     } catch (err) {
-      setError("Failed to fetch movie details");
+      setError('Failed to fetch movie details');
       console.error(err);
       return null;
     } finally {
@@ -58,21 +64,22 @@ function App() {
     }
   };
 
-  // Fetch actor's filmography
+  // Fetch actor filmography
   const fetchActorFilmography = async (actorId) => {
     setIsLoading(true);
     try {
-      const response = await fetch(
+      const res = await fetch(
         `${API_BASE_URL}/person/${actorId}/movie_credits?api_key=${API_KEY}`
       );
-      const data = await response.json();
-      // Sort filmography from newest to oldest
+      const data = await res.json();
       setFilmography(
-        data.cast.sort((a, b) => {
-          const aYear = a.release_date ? new Date(a.release_date).getFullYear() : 0;
-          const bYear = b.release_date ? new Date(b.release_date).getFullYear() : 0;
-          return bYear - aYear;
-        })
+        data.cast
+          .slice()
+          .sort((a, b) => {
+            const ay = a.release_date ? +a.release_date.slice(0, 4) : 0;
+            const by = b.release_date ? +b.release_date.slice(0, 4) : 0;
+            return by - ay;
+          })
       );
     } catch (err) {
       setError("Failed to fetch actor's filmography");
@@ -82,136 +89,174 @@ function App() {
     }
   };
 
-  // Memoize getRandomMovie using useCallback
-  const getRandomMovie = useCallback(async (setMovie, isStart) => {
-    setIsLoading(true);
-    try {
-      const today = new Date().toISOString().split("T")[0];
-      const page = Math.floor(Math.random() * 5) + 1;
-      const response = await fetch(
-        `${API_BASE_URL}/discover/movie?api_key=${API_KEY}&sort_by=popularity.desc&vote_count.gte=1000&primary_release_date.lte=${today}&page=${page}`
-      );
-      const data = await response.json();
-      const filteredMovies = data.results.filter(movie => movie.poster_path);
-      if (filteredMovies.length === 0) {
-        throw new Error("No suitable movie found");
-      }
-      const randomIndex = Math.floor(Math.random() * filteredMovies.length);
-      const randomMovie = filteredMovies[randomIndex];
+  // Get a random blockbuster movie
+  const getRandomMovie = useCallback(
+    async (setMovie, isStart) => {
+      setIsLoading(true);
+      try {
+        const today = new Date().toISOString().split('T')[0];
+        const page = Math.floor(Math.random() * 5) + 1;
+        const res = await fetch(
+          `${API_BASE_URL}/discover/movie?api_key=${API_KEY}&sort_by=popularity.desc&vote_count.gte=1000&primary_release_date.lte=${today}&page=${page}`
+        );
+        const { results } = await res.json();
+        const candidates = results.filter(m => m.poster_path);
+        const choice = candidates[Math.floor(Math.random() * candidates.length)];
+        const details = await fetchMovieDetails(choice.id);
 
-      if (isStart) {
-        const movieDetails = await fetchMovieDetails(randomMovie.id);
-        setStartMovie(randomMovie);
-        setCurrentMovie(movieDetails);
-        // Sort cast list by billing order
-        setCast(movieDetails.credits.cast.sort((a, b) => a.order - b.order));
-        setGameChain([{ movie: randomMovie, actor: null }]);
-      } else {
-        setTargetMovie(randomMovie);
+        if (isStart) {
+          setStartMovie(choice);
+          setCurrentMovie(details);
+          setCast(details.credits.cast.slice().sort((a, b) => a.order - b.order));
+          setGameChain([{ movie: choice, actor: null }]);
+        } else {
+          setTargetMovie(choice);
+        }
+      } catch (err) {
+        setError('Failed to get random movie');
+        console.error(err);
+      } finally {
+        setIsLoading(false);
       }
-    } catch (err) {
-      setError("Failed to get random movie");
-      console.error(err);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [API_KEY]);
+    },
+    [API_KEY]
+  );
 
-  // useEffect to auto-randomize start and target movies
+  // Auto‑randomize on mount
   useEffect(() => {
-    if (!startMovie) {
-      getRandomMovie(setStartMovie, true);
-    }
-    if (!targetMovie) {
-      getRandomMovie(setTargetMovie, false);
-    }
+    if (!startMovie) getRandomMovie(setStartMovie, true);
+    if (!targetMovie) getRandomMovie(setTargetMovie, false);
   }, [getRandomMovie, startMovie, targetMovie]);
 
-  // Handle movie selection from search results
+  // Handle manual selection
   const handleMovieSelect = async (movie, isStart) => {
-    const movieDetails = await fetchMovieDetails(movie.id);
+    const details = await fetchMovieDetails(movie.id);
     if (isStart) {
       setStartMovie(movie);
+      setCurrentMovie(details);
+      setCast(details.credits.cast.slice().sort((a, b) => a.order - b.order));
+      setGameChain([{ movie, actor: null }]);
       setSearchStartResults([]);
-      setCurrentMovie(movieDetails);
-      setGameChain([{ movie: movie, actor: null }]);
-      setCast(movieDetails.credits.cast.sort((a, b) => a.order - b.order));
     } else {
       setTargetMovie(movie);
       setSearchTargetResults([]);
     }
   };
 
-  // Handle actor selection
   const handleActorSelect = async (actor) => {
     setSelectedActor(actor);
     await fetchActorFilmography(actor.id);
   };
 
-  // Handle movie selection from filmography
-  const handleFilmographySelect = async (movie) => {
+  const handleFilmographySelect = (movie) => {
     if (gameChain.some(item => item.movie.id === movie.id)) {
-      setError("This movie is already in your chain!");
+      setError('This movie is already in your chain!');
       return;
     }
-    const movieDetails = await fetchMovieDetails(movie.id);
-    setGameChain([...gameChain, { movie: movie, actor: selectedActor }]);
-    setCurrentMovie(movieDetails);
-    setCast(movieDetails.credits.cast.sort((a, b) => a.order - b.order));
+    setGameChain([...gameChain, { movie, actor: selectedActor }]);
+    setCurrentMovie(movie);
+    setCast(movie.credits.cast.slice().sort((a, b) => a.order - b.order));
     setSelectedActor(null);
     setFilmography([]);
     if (movie.id === targetMovie.id) {
-      setGameState("complete");
+      setGameState('complete');
     }
   };
 
-  // Start the game
+  // Start & reset
   const startGame = () => {
-    if (startMovie && targetMovie) {
-      setGameState("playing");
-    } else {
-      setError("Please select both a starting and target movie");
-    }
+    if (startMovie && targetMovie) setGameState('playing');
+    else setError('Please select both a starting and target movie');
   };
-
-  // Reset the game
   const resetGame = () => {
-    setStartMovie("");
-    setTargetMovie("");
+    setStartMovie('');
+    setTargetMovie('');
     setCurrentMovie(null);
     setSelectedActor(null);
     setGameChain([]);
     setCast([]);
     setFilmography([]);
-    setGameState("setup");
+    setGameState('setup');
     setError(null);
+    setInitialChain(null);
+    setHintChain(null);
   };
 
-  // Render the setup screen
+  // ** Fetch hint on button click **
+  const fetchHint = async () => {
+    if (!currentMovie?.id || !targetMovie?.id) return;
+    setIsLoading(true);
+    try {
+      const res = await fetch(
+        `/api/path?fromMovieId=${currentMovie.id}&toMovieId=${targetMovie.id}`
+      );
+      const data = await res.json();
+      if (data.error) setError(data.error);
+      else setHintChain(data.chain);
+    } catch (err) {
+      console.error(err);
+      setError('Failed to fetch hint');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // ** Auto‑fetch initial shortest path when movies change **
+  useEffect(() => {
+    if (!currentMovie?.id || !targetMovie?.id) {
+      setInitialChain(null);
+      return;
+    }
+    setIsLoading(true);
+    (async () => {
+      try {
+        const res = await fetch(
+          `/api/path?fromMovieId=${currentMovie.id}&toMovieId=${targetMovie.id}`
+        );
+        const data = await res.json();
+        if (data.error) {
+          setError(data.error);
+          setInitialChain(null);
+        } else {
+          setInitialChain(data.chain);
+        }
+      } catch (err) {
+        console.error(err);
+        setError('Failed to fetch initial path');
+      } finally {
+        setIsLoading(false);
+      }
+    })();
+  }, [currentMovie, targetMovie]);
+
+  // Setup screen JSX
   const renderSetupScreen = () => (
     <div className="setup-screen">
       <h1>Movie Connections</h1>
       <p>Connect movies through actors in the fewest steps possible!</p>
       <div className="movie-selectors">
+        {/* Starting Movie */}
         <div className="movie-selector">
           <h2>Starting Movie</h2>
           <div className="search-container">
             <input
               type="text"
               placeholder="Search for a movie..."
-              value={startMovie ? startMovie.title : ""}
-              onChange={(e) => {
-                setStartMovie("");
+              value={startMovie.title || ''}
+              onChange={e => {
+                setStartMovie('');
                 searchMovies(e.target.value, setSearchStartResults);
               }}
             />
-            <button onClick={() => getRandomMovie(setStartMovie, true)}>Random</button>
+            <button onClick={() => getRandomMovie(setStartMovie, true)}>
+              Random
+            </button>
           </div>
           {searchStartResults.length > 0 && (
             <ul className="search-results">
-              {searchStartResults.map(movie => (
-                <li key={movie.id} onClick={() => handleMovieSelect(movie, true)}>
-                  {movie.title} ({movie.release_date ? movie.release_date.substring(0, 4) : "N/A"})
+              {searchStartResults.map(m => (
+                <li key={m.id} onClick={() => handleMovieSelect(m, true)}>
+                  {m.title} ({m.release_date?.slice(0, 4) || 'N/A'})
                 </li>
               ))}
             </ul>
@@ -219,33 +264,41 @@ function App() {
           {startMovie && (
             <div className="selected-movie">
               <img
-                src={startMovie.poster_path ? `${POSTER_BASE_URL}${startMovie.poster_path}` : "/api/placeholder/200/300"}
+                src={
+                  startMovie.poster_path
+                    ? POSTER_BASE_URL + startMovie.poster_path
+                    : '/api/placeholder/200/300'
+                }
                 alt={startMovie.title}
               />
               <h3>{startMovie.title}</h3>
-              <p>({startMovie.release_date ? startMovie.release_date.substring(0, 4) : "N/A"})</p>
+              <p>({startMovie.release_date?.slice(0, 4) || 'N/A'})</p>
             </div>
           )}
         </div>
+
+        {/* Target Movie */}
         <div className="movie-selector">
           <h2>Target Movie</h2>
           <div className="search-container">
             <input
               type="text"
               placeholder="Search for a movie..."
-              value={targetMovie ? targetMovie.title : ""}
-              onChange={(e) => {
-                setTargetMovie("");
+              value={targetMovie.title || ''}
+              onChange={e => {
+                setTargetMovie('');
                 searchMovies(e.target.value, setSearchTargetResults);
               }}
             />
-            <button onClick={() => getRandomMovie(setTargetMovie, false)}>Random</button>
+            <button onClick={() => getRandomMovie(setTargetMovie, false)}>
+              Random
+            </button>
           </div>
           {searchTargetResults.length > 0 && (
             <ul className="search-results">
-              {searchTargetResults.map(movie => (
-                <li key={movie.id} onClick={() => handleMovieSelect(movie, false)}>
-                  {movie.title} ({movie.release_date ? movie.release_date.substring(0, 4) : "N/A"})
+              {searchTargetResults.map(m => (
+                <li key={m.id} onClick={() => handleMovieSelect(m, false)}>
+                  {m.title} ({m.release_date?.slice(0, 4) || 'N/A'})
                 </li>
               ))}
             </ul>
@@ -253,11 +306,15 @@ function App() {
           {targetMovie && (
             <div className="selected-movie">
               <img
-                src={targetMovie.poster_path ? `${POSTER_BASE_URL}${targetMovie.poster_path}` : "/api/placeholder/200/300"}
+                src={
+                  targetMovie.poster_path
+                    ? POSTER_BASE_URL + targetMovie.poster_path
+                    : '/api/placeholder/200/300'
+                }
                 alt={targetMovie.title}
               />
               <h3>{targetMovie.title}</h3>
-              <p>({targetMovie.release_date ? targetMovie.release_date.substring(0, 4) : "N/A"})</p>
+              <p>({targetMovie.release_date?.slice(0, 4) || 'N/A'})</p>
             </div>
           )}
         </div>
@@ -272,15 +329,20 @@ function App() {
     </div>
   );
 
-  // Render the game board
+  // Game board JSX
   const renderGameBoard = () => (
     <div className="game-board">
+      {/* Target info & steps */}
       <div className="game-info">
         <div className="target-info">
           <h3>Target Movie:</h3>
           <div className="target-movie">
             <img
-              src={targetMovie.poster_path ? `${POSTER_BASE_URL}${targetMovie.poster_path}` : "/api/placeholder/100/150"}
+              src={
+                targetMovie.poster_path
+                  ? POSTER_BASE_URL + targetMovie.poster_path
+                  : '/api/placeholder/100/150'
+              }
               alt={targetMovie.title}
             />
             <p>{targetMovie.title}</p>
@@ -290,64 +352,121 @@ function App() {
           <h3>Steps: {gameChain.length - 1}</h3>
         </div>
       </div>
+
+      {/* Movie–actor chain visualization */}
       <div className="game-chain">
         <h2>Your Movie Chain</h2>
         <div className="chain-items">
-          {gameChain.map((item, index) => (
-            <div key={index} className="chain-item">
+          {gameChain.map((item, idx) => (
+            <div key={idx} className="chain-item">
               <div className="chain-movie">
                 <img
-                  src={item.movie.poster_path ? `${POSTER_BASE_URL}${item.movie.poster_path}` : "/api/placeholder/100/150"}
+                  src={
+                    item.movie.poster_path
+                      ? POSTER_BASE_URL + item.movie.poster_path
+                      : '/api/placeholder/100/150'
+                  }
                   alt={item.movie.title}
                 />
                 <p>{item.movie.title}</p>
               </div>
               {item.actor && (
-                <div className="chain-actor">
-                  <span>via</span>
-                  <p>{item.actor.name}</p>
-                  <img
-                    src={item.actor.profile_path ? `${POSTER_BASE_URL}${item.actor.profile_path}` : "/api/placeholder/100/150"}
-                    alt={item.actor.name}
-                  />
-                </div>
+                <>
+                  <span className="chain-via">via</span>
+                  <div className="chain-actor">
+                    <p>{item.actor.name}</p>
+                    <img
+                      src={
+                        item.actor.profile_path
+                          ? POSTER_BASE_URL + item.actor.profile_path
+                          : '/api/placeholder/100/150'
+                      }
+                      alt={item.actor.name}
+                    />
+                  </div>
+                </>
               )}
-              {index < gameChain.length - 1 && <div className="chain-arrow">→</div>}
+              {idx < gameChain.length - 1 && (
+                <div className="chain-arrow">→</div>
+              )}
             </div>
           ))}
         </div>
       </div>
+
+      {/* Current movie */}
       <div className="current-movie">
         <h2>Current Movie</h2>
         <div className="movie-details">
           <img
-            src={currentMovie.poster_path ? `${POSTER_BASE_URL}${currentMovie.poster_path}` : "/api/placeholder/200/300"}
+            src={
+              currentMovie.poster_path
+                ? POSTER_BASE_URL + currentMovie.poster_path
+                : '/api/placeholder/200/300'
+            }
             alt={currentMovie.title}
           />
           <div className="movie-info">
             <h3>{currentMovie.title}</h3>
-            <p>({currentMovie.release_date ? currentMovie.release_date.substring(0, 4) : "N/A"})</p>
+            <p>({currentMovie.release_date?.slice(0, 4) || 'N/A'})</p>
           </div>
         </div>
       </div>
+
+      {/* Initial shortest path display */}
+      {initialChain && (
+        <div className="initial-path">
+          <strong>Shortest path:</strong>{' '}
+          {initialChain.map((node, i) => (
+            <span key={node.id}>
+              {node.title}
+              {i < initialChain.length - 1 ? ' → ' : ''}
+            </span>
+          ))}
+        </div>
+      )}
+
+      {/* Hint button & display */}
+      <div className="hint-section">
+        <button onClick={fetchHint} className="hint-button">
+          Give me a hint
+        </button>
+        {hintChain && (
+          <div className="hint">
+            <strong>Next step:</strong>{' '}
+            {hintChain.map((node, i) => (
+              <span key={node.id}>
+                {node.title}
+                {i < hintChain.length - 1 ? ' → ' : ''}
+              </span>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Cast or filmography */}
       {selectedActor ? (
         <div className="filmography-section">
           <h2>Movies with {selectedActor.name}</h2>
           <button onClick={() => setSelectedActor(null)}>Back to Cast</button>
           <div className="filmography-list">
-            {filmography.map(movie => (
+            {filmography.map(m => (
               <div
-                key={movie.id}
+                key={m.id}
                 className="filmography-item"
-                onClick={() => handleFilmographySelect(movie)}
+                onClick={() => handleFilmographySelect(m)}
               >
                 <img
-                  src={movie.poster_path ? `${POSTER_BASE_URL}${movie.poster_path}` : "/api/placeholder/100/150"}
-                  alt={movie.title}
+                  src={
+                    m.poster_path
+                      ? POSTER_BASE_URL + m.poster_path
+                      : '/api/placeholder/100/150'
+                  }
+                  alt={m.title}
                 />
                 <div className="movie-info">
-                  <h3>{movie.title}</h3>
-                  <p>({movie.release_date ? movie.release_date.substring(0, 4) : "N/A"})</p>
+                  <h3>{m.title}</h3>
+                  <p>({m.release_date?.slice(0, 4) || 'N/A'})</p>
                 </div>
               </div>
             ))}
@@ -357,18 +476,22 @@ function App() {
         <div className="cast-section">
           <h2>Select an Actor</h2>
           <div className="cast-list">
-            {cast.map(actor => (
+            {cast.map(a => (
               <div
-                key={actor.id}
+                key={a.id}
                 className="cast-item"
-                onClick={() => handleActorSelect(actor)}
+                onClick={() => handleActorSelect(a)}
               >
                 <img
-                  src={actor.profile_path ? `${POSTER_BASE_URL}${actor.profile_path}` : "/api/placeholder/100/150"}
-                  alt={actor.name}
+                  src={
+                    a.profile_path
+                      ? POSTER_BASE_URL + a.profile_path
+                      : '/api/placeholder/100/150'
+                  }
+                  alt={a.name}
                 />
-                <p>{actor.name}</p>
-                <p className="character">as {actor.character}</p>
+                <p>{a.name}</p>
+                <p className="character">as {a.character}</p>
               </div>
             ))}
           </div>
@@ -377,33 +500,45 @@ function App() {
     </div>
   );
 
-  // Render the result screen
+  // Result screen JSX
   const renderResultScreen = () => (
     <div className="result-screen">
       <h1>You've reached the target movie!</h1>
       <h2>Steps taken: {gameChain.length - 1}</h2>
       <div className="final-chain">
-        {gameChain.map((item, index) => (
-          <div key={index} className="chain-item">
+        {gameChain.map((item, idx) => (
+          <div key={idx} className="chain-item">
             <div className="chain-movie">
               <img
-                src={item.movie.poster_path ? `${POSTER_BASE_URL}${item.movie.poster_path}` : "/api/placeholder/100/150"}
+                src={
+                  item.movie.poster_path
+                    ? POSTER_BASE_URL + item.movie.poster_path
+                    : '/api/placeholder/100/150'
+                }
                 alt={item.movie.title}
               />
               <h3>{item.movie.title}</h3>
-              <p>({item.movie.release_date ? item.movie.release_date.substring(0, 4) : "N/A"})</p>
+              <p>({item.movie.release_date?.slice(0, 4) || 'N/A'})</p>
             </div>
             {item.actor && (
-              <div className="chain-actor">
-                <span>via</span>
-                <h3>{item.actor.name}</h3>
-                <img
-                  src={item.actor.profile_path ? `${POSTER_BASE_URL}${item.actor.profile_path}` : "/api/placeholder/100/150"}
-                  alt={item.actor.name}
-                />
-              </div>
+              <>
+                <span className="chain-via">via</span>
+                <div className="chain-actor">
+                  <h3>{item.actor.name}</h3>
+                  <img
+                    src={
+                      item.actor.profile_path
+                        ? POSTER_BASE_URL + item.actor.profile_path
+                        : '/api/placeholder/100/150'
+                    }
+                    alt={item.actor.name}
+                  />
+                </div>
+              </>
             )}
-            {index < gameChain.length - 1 && <div className="chain-arrow">→</div>}
+            {idx < gameChain.length - 1 && (
+              <div className="chain-arrow">→</div>
+            )}
           </div>
         ))}
       </div>
@@ -423,14 +558,14 @@ function App() {
       )}
       {isLoading ? (
         <div className="loading">
-          <div className="spinner"></div>
+          <div className="spinner" />
           <p>Loading...</p>
         </div>
       ) : (
         <>
-          {gameState === "setup" && renderSetupScreen()}
-          {gameState === "playing" && renderGameBoard()}
-          {gameState === "complete" && renderResultScreen()}
+          {gameState === 'setup' && renderSetupScreen()}
+          {gameState === 'playing' && renderGameBoard()}
+          {gameState === 'complete' && renderResultScreen()}
         </>
       )}
     </div>

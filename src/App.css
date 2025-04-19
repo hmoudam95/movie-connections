@@ -472,3 +472,26 @@ input {
     justify-content: center;
   }
 }
+
+.initial-path {
+  margin: 1rem 0;
+  padding: 0.5rem;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 4px;
+}
+
+.initial-path h3 {
+  margin-bottom: 0.5rem;
+}
+
+.initial-path span {
+  margin-right: 0.3rem;
+  font-weight: 500;
+}
+
+.initial-path {
+  margin: 1rem 0;
+  padding: 0.5rem;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 4px;
+}
