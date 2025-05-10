@@ -148,20 +148,46 @@ function App() {
     await fetchActorFilmography(actor.id);
   };
 
-  const handleFilmographySelect = (movie) => {
-    if (gameChain.some(item => item.movie.id === movie.id)) {
+  const handleFilmographySelect = async (movieSummary) => {
+    // movieSummary is just the flat object from the actor’s credit list,
+    // so we need to pull in its credits before we can use it.
+    if (gameChain.some(item => item.movie.id === movieSummary.id)) {
       setError('This movie is already in your chain!');
       return;
     }
-    setGameChain([...gameChain, { movie, actor: selectedActor }]);
-    setCurrentMovie(movie);
-    setCast(movie.credits.cast.slice().sort((a, b) => a.order - b.order));
-    setSelectedActor(null);
-    setFilmography([]);
-    if (movie.id === targetMovie.id) {
-      setGameState('complete');
+
+    setIsLoading(true);
+    try {
+      const details = await fetchMovieDetails(movieSummary.id);
+
+      // add the full-details movie + actor into the chain
+      setGameChain(chain => [
+        ...chain,
+        { movie: details, actor: selectedActor }
+      ]);
+      setCurrentMovie(details);
+
+      // now safe to read details.credits.cast
+      setCast(
+        details.credits.cast
+          .slice()
+          .sort((a, b) => a.order - b.order)
+      );
+
+      setSelectedActor(null);
+      setFilmography([]);
+
+      if (details.id === targetMovie.id) {
+        setGameState('complete');
+      }
+    } catch (err) {
+      console.error(err);
+      setError('Failed to load movie details');
+    } finally {
+      setIsLoading(false);
     }
   };
+
 
   // Start & reset
   const startGame = () => {
@@ -203,15 +229,27 @@ function App() {
 
   // ** Auto‑fetch initial shortest path when movies change **
   useEffect(() => {
-    if (!currentMovie?.id || !targetMovie?.id) {
+    // only fetch while the game is in progress
+    if (gameState !== 'playing') {
       setInitialChain(null);
       return;
     }
+
+    // make sure both IDs exist and aren’t the same
+    if (
+      !currentMovie?.id ||
+      !targetMovie?.id ||
+      currentMovie.id === targetMovie.id
+    ) {
+      return;
+    }
+
     setIsLoading(true);
     (async () => {
       try {
         const res = await fetch(
-          `/api/path?fromMovieId=${currentMovie.id}&toMovieId=${targetMovie.id}`
+          `${process.env.REACT_APP_API_BASE_URL}/api/path` +
+          `?fromMovieId=${currentMovie.id}&toMovieId=${targetMovie.id}`
         );
         const data = await res.json();
         if (data.error) {
@@ -227,7 +265,8 @@ function App() {
         setIsLoading(false);
       }
     })();
-  }, [currentMovie, targetMovie]);
+  }, [currentMovie, targetMovie, gameState]);
+
 
   // Setup screen JSX
   const renderSetupScreen = () => (

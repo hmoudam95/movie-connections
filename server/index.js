@@ -1,5 +1,6 @@
 require('dotenv').config();
 const express = require('express');
+const cors = require('cors');
 const neo4j = require('neo4j-driver');
 
 const app = express();
@@ -7,6 +8,9 @@ const driver = neo4j.driver(
     process.env.NEO4J_URI,
     neo4j.auth.basic(process.env.NEO4J_USER, process.env.NEO4J_PASSWORD)
 );
+
+// ← Add this as early as possible:
+app.use(cors());
 
 // ─── Helper: upsert Movie & its cast ─────────────────────────────────────────
 async function ensureMovie(session, movieIdStr) {
