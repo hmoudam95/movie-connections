@@ -5,6 +5,10 @@ const API_KEY = process.env.REACT_APP_TMDB_API_KEY;
 const API_BASE_URL = 'https://api.themoviedb.org/3';
 const POSTER_BASE_URL = 'https://image.tmdb.org/t/p/w300';
 
+// If REACT_APP_API_BASE_URL isn’t set (in dev), we'll hit the CRA proxy
+const API_BASE = process.env.REACT_APP_API_BASE_URL || '';
+
+
 function App() {
   // Movie & game state
   const [startMovie, setStartMovie] = useState('');
@@ -214,7 +218,7 @@ function App() {
     setIsLoading(true);
     try {
       const res = await fetch(
-        `/api/path?fromMovieId=${currentMovie.id}&toMovieId=${targetMovie.id}`
+        `${API_BASE}/api/path?fromMovieId=${currentMovie.id}&toMovieId=${targetMovie.id}`
       );
       const data = await res.json();
       if (data.error) setError(data.error);
@@ -248,8 +252,7 @@ function App() {
     (async () => {
       try {
         const res = await fetch(
-          `${process.env.REACT_APP_API_BASE_URL}/api/path` +
-          `?fromMovieId=${currentMovie.id}&toMovieId=${targetMovie.id}`
+          `${API_BASE}/api/path?fromMovieId=${currentMovie.id}&toMovieId=${targetMovie.id}`
         );
         const data = await res.json();
         if (data.error) {
