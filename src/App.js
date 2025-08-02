@@ -218,7 +218,7 @@ function App() {
     setIsLoading(true);
     try {
       const res = await fetch(
-        `${API_BASE}/api/path?fromMovieId=${currentMovie.id}&toMovieId=${targetMovie.id}`
+        `/api/path?fromMovieId=${currentMovie.id}&toMovieId=${targetMovie.id}`
       );
       const data = await res.json();
       if (data.error) setError(data.error);
@@ -252,7 +252,7 @@ function App() {
     (async () => {
       try {
         const res = await fetch(
-          `${API_BASE}/api/path?fromMovieId=${currentMovie.id}&toMovieId=${targetMovie.id}`
+          `/api/path?fromMovieId=${currentMovie.id}&toMovieId=${targetMovie.id}`
         );
         const data = await res.json();
         if (data.error) {
