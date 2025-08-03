@@ -1,440 +1,87 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+/* Movie Connections - Base Styles */
 
-/* Import custom animations */
-@import url('./styles/animations.css');
-
-/* Custom CSS Variables for Movie Game Theme */
-:root {
-  /* Dark Background Colors */
-  --bg-primary: #0f172a;
-  --bg-secondary: #1e293b;
-  --bg-tertiary: #334155;
-  --bg-accent: #475569;
-
-  /* Neon Accent Colors */
-  --neon-purple: #6366f1;
-  --neon-blue: #3b82f6;
-  --neon-cyan: #06b6d4;
-  --neon-pink: #ec4899;
-  --neon-green: #10b981;
-  --neon-yellow: #f59e0b;
-  --neon-red: #ef4444;
-  --neon-orange: #f97316;
-
-  /* Text Colors */
-  --text-primary: #f8fafc;
-  --text-secondary: #cbd5e1;
-  --text-muted: #94a3b8;
-  --text-accent: #06b6d4;
-
-  /* Border Colors */
-  --border-primary: #475569;
-  --border-secondary: #64748b;
-  --border-accent: #06b6d4;
-
-  /* Shadow Colors */
-  --shadow-neon-purple: 0 0 20px rgba(99, 102, 241, 0.5);
-  --shadow-neon-blue: 0 0 20px rgba(59, 130, 246, 0.5);
-  --shadow-neon-cyan: 0 0 20px rgba(6, 182, 212, 0.5);
-  --shadow-neon-pink: 0 0 20px rgba(236, 72, 153, 0.5);
-
-  /* Gradient Colors */
-  --gradient-primary: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  --gradient-secondary: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
-  --gradient-accent: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
-  --gradient-dark: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
-  --gradient-neon: linear-gradient(135deg, #6366f1 0%, #06b6d4 100%);
-
-  /* Animation Durations */
-  --duration-fast: 0.15s;
-  --duration-normal: 0.3s;
-  --duration-slow: 0.5s;
-  --duration-slower: 0.8s;
-
-  /* Border Radius */
-  --radius-sm: 0.375rem;
-  --radius-md: 0.5rem;
-  --radius-lg: 0.75rem;
-  --radius-xl: 1rem;
-  --radius-2xl: 1.5rem;
-  --radius-full: 9999px;
+/* Global Reset and Base Styles */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
 }
 
-/* Dark mode overrides */
-.dark {
-  --bg-primary: #020617;
-  --bg-secondary: #0f172a;
-  --bg-tertiary: #1e293b;
-  --bg-accent: #334155;
-
-  --text-primary: #f8fafc;
-  --text-secondary: #e2e8f0;
-  --text-muted: #cbd5e1;
-
-  --border-primary: #334155;
-  --border-secondary: #475569;
+html {
+  scroll-behavior: smooth;
 }
 
-/* Custom base styles for Movie Connections Game */
-@layer base {
-  html {
-    scroll-behavior: smooth;
-  }
-
-  body {
-    background: var(--gradient-dark);
-    color: var(--text-primary);
-    font-family: 'Roboto', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Oxygen',
-      'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
-      sans-serif;
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
-    min-height: 100vh;
-  }
-
-  /* Custom scrollbar */
-  ::-webkit-scrollbar {
-    width: 8px;
-  }
-
-  ::-webkit-scrollbar-track {
-    background: var(--bg-secondary);
-  }
-
-  ::-webkit-scrollbar-thumb {
-    background: var(--neon-purple);
-    border-radius: var(--radius-full);
-  }
-
-  ::-webkit-scrollbar-thumb:hover {
-    background: var(--neon-blue);
-  }
-
-  /* Selection styles */
-  ::selection {
-    background: var(--neon-cyan);
-    color: var(--text-primary);
-  }
-
-  ::-moz-selection {
-    background: var(--neon-cyan);
-    color: var(--text-primary);
-  }
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  min-height: 100vh;
 }
 
-/* Custom component styles */
-@layer components {
-
-  /* Movie card component */
-  .movie-card {
-    background: var(--gradient-secondary);
-    border-radius: var(--radius-2xl);
-    padding: 1rem;
-    box-shadow: var(--shadow-neon-blue);
-    border: 1px solid var(--border-accent);
-    transition: all var(--duration-normal) ease;
-    position: relative;
-    overflow: hidden;
-  }
-
-  .movie-card::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: -100%;
-    width: 100%;
-    height: 100%;
-    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
-    transition: left var(--duration-slow) ease;
-  }
-
-  .movie-card:hover::before {
-    left: 100%;
-  }
-
-  .movie-card:hover {
-    transform: translateY(-8px) scale(1.02);
-    box-shadow: var(--shadow-neon-cyan);
-    border-color: var(--neon-cyan);
-  }
-
-  /* Actor card component */
-  .actor-card {
-    background: var(--gradient-primary);
-    border-radius: var(--radius-xl);
-    padding: 0.75rem;
-    box-shadow: var(--shadow-neon-purple);
-    border: 1px solid var(--border-accent);
-    transition: all var(--duration-normal) ease;
-    position: relative;
-  }
-
-  .actor-card:hover {
-    transform: scale(1.1) rotate(2deg);
-    box-shadow: var(--shadow-neon-pink);
-    border-color: var(--neon-pink);
-  }
-
-  /* Game button component */
-  .game-button {
-    background: var(--gradient-neon);
-    color: var(--text-primary);
-    font-weight: 600;
-    padding: 0.75rem 1.5rem;
-    border-radius: var(--radius-xl);
-    box-shadow: var(--shadow-neon-purple);
-    transition: all var(--duration-normal) ease;
-    border: none;
-    cursor: pointer;
-    position: relative;
-    overflow: hidden;
-  }
-
-  .game-button::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: -100%;
-    width: 100%;
-    height: 100%;
-    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
-    transition: left var(--duration-slow) ease;
-  }
-
-  .game-button:hover::before {
-    left: 100%;
-  }
-
-  .game-button:hover {
-    transform: translateY(-2px);
-    box-shadow: var(--shadow-neon-cyan);
-  }
-
-  .game-button:active {
-    transform: translateY(0) scale(0.95);
-  }
-
-  /* Glass morphism component */
-  .glass {
-    background: rgba(255, 255, 255, 0.1);
-    backdrop-filter: blur(10px);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    border-radius: var(--radius-2xl);
-  }
-
-  /* Chain arrow component */
-  .chain-arrow {
-    color: var(--neon-cyan);
-    font-size: 1.5rem;
-    font-weight: bold;
-    animation: chainArrow 1s ease-in-out infinite;
-  }
-
-  /* Loading spinner */
-  .loading-spinner {
-    width: 2rem;
-    height: 2rem;
-    border: 4px solid var(--neon-purple);
-    border-top: 4px solid transparent;
-    border-radius: 50%;
-    animation: spin 1s linear infinite;
-  }
-
-  /* Search input */
-  .search-input {
-    background: var(--bg-tertiary);
-    border: 1px solid var(--border-primary);
-    color: var(--text-primary);
-    border-radius: var(--radius-xl);
-    padding: 0.75rem 1rem;
-    transition: all var(--duration-normal) ease;
-  }
-
-  .search-input::placeholder {
-    color: var(--text-muted);
-  }
-
-  .search-input:focus {
-    outline: none;
-    border-color: var(--neon-cyan);
-    box-shadow: var(--shadow-neon-cyan);
-  }
-
-  /* Movie poster */
-  .movie-poster {
-    border-radius: var(--radius-xl);
-    box-shadow: var(--shadow-neon-blue);
-    transition: all var(--duration-normal) ease;
-  }
-
-  .movie-poster:hover {
-    box-shadow: var(--shadow-neon-cyan);
-    transform: scale(1.05);
-  }
-
-  /* Game chain item */
-  .chain-item {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-    padding: 1rem;
-    background: var(--gradient-primary);
-    border-radius: var(--radius-xl);
-    animation: fadeInUp 0.6s ease-out;
-    border: 1px solid var(--border-accent);
-  }
-
-  /* Neon text effect */
-  .neon-text {
-    color: var(--neon-cyan);
-    text-shadow: 0 0 10px var(--neon-cyan), 0 0 20px var(--neon-cyan), 0 0 30px var(--neon-cyan);
-  }
-
-  /* Glow effect */
-  .glow-effect {
-    box-shadow: var(--shadow-neon-purple);
-    animation: glow 2s ease-in-out infinite alternate;
-  }
-
-  /* Shimmer effect */
-  .shimmer {
-    position: relative;
-    overflow: hidden;
-  }
-
-  .shimmer::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: -100%;
-    width: 100%;
-    height: 100%;
-    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
-    animation: shimmer 2s infinite;
-  }
+/* Code blocks */
+code {
+  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New', monospace;
 }
 
-/* Custom utility styles */
-@layer utilities {
-
-  /* Text gradient */
-  .text-gradient {
-    background: var(--gradient-neon);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-  }
-
-  /* Background gradient */
-  .bg-movie-gradient {
-    background: var(--gradient-primary);
-  }
-
-  .bg-neon-gradient {
-    background: var(--gradient-neon);
-  }
-
-  /* Glow effect */
-  .glow-effect {
-    box-shadow: var(--shadow-neon-purple);
-    animation: glow 2s ease-in-out infinite alternate;
-  }
-
-  /* Movie game specific utilities */
-  .movie-title {
-    font-size: 1.25rem;
-    font-weight: bold;
-    color: var(--neon-cyan);
-    text-shadow: 0 0 10px var(--neon-cyan);
-  }
-
-  .actor-name {
-    font-size: 1.125rem;
-    font-weight: 600;
-    color: var(--neon-pink);
-    text-shadow: 0 0 8px var(--neon-pink);
-  }
-
-  .game-status {
-    font-size: 0.875rem;
-    font-weight: 500;
-    color: var(--text-muted);
-  }
-
-  .step-counter {
-    font-size: 1.5rem;
-    font-weight: bold;
-    color: var(--neon-yellow);
-    text-shadow: 0 0 10px var(--neon-yellow);
-  }
-
-  /* Neon border utilities */
-  .border-neon-purple {
-    border-color: var(--neon-purple);
-    box-shadow: 0 0 10px var(--neon-purple);
-  }
-
-  .border-neon-blue {
-    border-color: var(--neon-blue);
-    box-shadow: 0 0 10px var(--neon-blue);
-  }
-
-  .border-neon-cyan {
-    border-color: var(--neon-cyan);
-    box-shadow: 0 0 10px var(--neon-cyan);
-  }
-
-  .border-neon-pink {
-    border-color: var(--neon-pink);
-    box-shadow: 0 0 10px var(--neon-pink);
-  }
+/* Custom scrollbar styling */
+::-webkit-scrollbar {
+  width: 8px;
 }
 
-/* Note: Keyframes are now defined in animations.css */
-
-/* ========================================
-   3D TRANSFORM UTILITIES
-   ======================================== */
-
-.perspective-1000 {
-  perspective: 1000px;
+::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.02);
 }
 
-.transform-style-preserve-3d {
-  transform-style: preserve-3d;
+::-webkit-scrollbar-thumb {
+  background: rgba(99, 102, 241, 0.6);
+  border-radius: 4px;
 }
 
-.backface-visible {
-  backface-visibility: visible;
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(99, 102, 241, 0.8);
 }
 
-.backface-hidden {
-  backface-visibility: hidden;
+/* Selection styling */
+::selection {
+  background: rgba(99, 102, 241, 0.3);
+  color: white;
 }
 
-/* ========================================
-   LINE CLAMP UTILITIES
-   ======================================== */
-
-.line-clamp-1 {
-  overflow: hidden;
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 1;
+::-moz-selection {
+  background: rgba(99, 102, 241, 0.3);
+  color: white;
 }
 
-.line-clamp-2 {
-  overflow: hidden;
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
+/* Focus outline for accessibility */
+*:focus {
+  outline: 2px solid rgba(99, 102, 241, 0.5);
+  outline-offset: 2px;
 }
 
-.line-clamp-3 {
-  overflow: hidden;
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 3;
+/* Ensure images are responsive */
+img {
+  max-width: 100%;
+  height: auto;
+}
+
+/* Remove default button styles */
+button {
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  cursor: pointer;
+  outline: inherit;
+}
+
+/* Remove default list styles */
+ul, ol {
+  list-style: none;
+}
+
+/* Ensure links don't have default styling */
+a {
+  color: inherit;
+  text-decoration: none;
 }
