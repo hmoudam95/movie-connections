@@ -6,7 +6,7 @@ const API_BASE_URL = 'https://api.themoviedb.org/3';
 const POSTER_BASE_URL = 'https://image.tmdb.org/t/p/w300';
 
 // If REACT_APP_API_BASE_URL isn’t set (in dev), we'll hit the CRA proxy
-const API_BASE = process.env.REACT_APP_API_BASE_URL || '';
+// const API_BASE = process.env.REACT_APP_API_BASE_URL || '';
 
 
 function App() {
@@ -123,7 +123,7 @@ function App() {
         setIsLoading(false);
       }
     },
-    [API_KEY]
+    []
   );
 
   // Auto‑randomize on mount
