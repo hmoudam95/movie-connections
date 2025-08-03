@@ -26,8 +26,7 @@ function App() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  // ** New state for shortest‑path display **
-  const [initialChain, setInitialChain] = useState(null);
+  // ** State for hint display **
   const [hintChain, setHintChain] = useState(null);
 
   // Search for movies
@@ -182,7 +181,8 @@ function App() {
       setFilmography([]);
 
       if (details.id === targetMovie.id) {
-        setGameState('complete');
+        // Add delay for smooth transition to victory screen
+        setTimeout(() => setGameState('complete'), 300);
       }
     } catch (err) {
       console.error(err);
@@ -193,23 +193,29 @@ function App() {
   };
 
 
-  // Start & reset
+  // Start & reset with smooth transitions
   const startGame = () => {
-    if (startMovie && targetMovie) setGameState('playing');
-    else setError('Please select both a starting and target movie');
+    if (startMovie && targetMovie) {
+      // Add a small delay for smooth transition
+      setTimeout(() => setGameState('playing'), 100);
+    } else {
+      setError('Please select both a starting and target movie');
+    }
   };
   const resetGame = () => {
-    setStartMovie('');
-    setTargetMovie('');
-    setCurrentMovie(null);
-    setSelectedActor(null);
-    setGameChain([]);
-    setCast([]);
-    setFilmography([]);
-    setGameState('setup');
-    setError(null);
-    setInitialChain(null);
-    setHintChain(null);
+    // Add a small delay for smooth transition
+    setTimeout(() => {
+      setStartMovie('');
+      setTargetMovie('');
+      setCurrentMovie(null);
+      setSelectedActor(null);
+      setGameChain([]);
+      setCast([]);
+      setFilmography([]);
+      setGameState('setup');
+      setError(null);
+      setHintChain(null);
+    }, 100);
   };
 
   // ** Fetch hint on button click **
@@ -231,52 +237,16 @@ function App() {
     }
   };
 
-  // ** Auto‑fetch initial shortest path when movies change **
-  useEffect(() => {
-    // only fetch while the game is in progress
-    if (gameState !== 'playing') {
-      setInitialChain(null);
-      return;
-    }
-
-    // make sure both IDs exist and aren’t the same
-    if (
-      !currentMovie?.id ||
-      !targetMovie?.id ||
-      currentMovie.id === targetMovie.id
-    ) {
-      return;
-    }
-
-    setIsLoading(true);
-    (async () => {
-      try {
-        const res = await fetch(
-          `/api/path?fromMovieId=${currentMovie.id}&toMovieId=${targetMovie.id}`
-        );
-        const data = await res.json();
-        if (data.error) {
-          setError(data.error);
-          setInitialChain(null);
-        } else {
-          setInitialChain(data.chain);
-        }
-      } catch (err) {
-        console.error(err);
-        setError('Failed to fetch initial path');
-      } finally {
-        setIsLoading(false);
-      }
-    })();
-  }, [currentMovie, targetMovie, gameState]);
+  // ** Removed auto-fetch for better performance **
+  // Initial shortest path is now only fetched when user clicks "Give me a hint"
 
 
   // Setup screen JSX
   const renderSetupScreen = () => (
-    <div className="setup-screen">
-      <h1>Movie Connections</h1>
+    <div className="setup-screen page-transition">
+      <h1>🎬 Movie Connections</h1>
       <p>Connect movies through actors in the fewest steps possible!</p>
-      <div className="movie-selectors">
+      <div className="movie-selectors stagger-children">
         {/* Starting Movie */}
         <div className="movie-selector">
           <h2>Starting Movie</h2>
@@ -290,7 +260,7 @@ function App() {
                 searchMovies(e.target.value, setSearchStartResults);
               }}
             />
-            <button onClick={() => getRandomMovie(setStartMovie, true)}>
+            <button className="button-secondary" onClick={() => getRandomMovie(setStartMovie, true)}>
               Random
             </button>
           </div>
@@ -332,7 +302,7 @@ function App() {
                 searchMovies(e.target.value, setSearchTargetResults);
               }}
             />
-            <button onClick={() => getRandomMovie(setTargetMovie, false)}>
+            <button className="button-secondary" onClick={() => getRandomMovie(setTargetMovie, false)}>
               Random
             </button>
           </div>
@@ -362,7 +332,7 @@ function App() {
         </div>
       </div>
       <button
-        className="start-button"
+        className="start-button button-large"
         onClick={startGame}
         disabled={!startMovie || !targetMovie}
       >
@@ -373,9 +343,9 @@ function App() {
 
   // Game board JSX
   const renderGameBoard = () => (
-    <div className="game-board">
+    <div className="game-board page-transition">
       {/* Target info & steps */}
-      <div className="game-info">
+      <div className="game-info animate-in">
         <div className="target-info">
           <h3>Target Movie:</h3>
           <div className="target-movie">
@@ -396,7 +366,7 @@ function App() {
       </div>
 
       {/* Movie–actor chain visualization */}
-      <div className="game-chain">
+      <div className="game-chain animate-in animate-in-delay-1">
         <h2>Your Movie Chain</h2>
         <div className="chain-items">
           {gameChain.map((item, idx) => (
@@ -437,7 +407,7 @@ function App() {
       </div>
 
       {/* Current movie */}
-      <div className="current-movie">
+      <div className="current-movie animate-in animate-in-delay-2">
         <h2>Current Movie</h2>
         <div className="movie-details">
           <img
@@ -455,27 +425,16 @@ function App() {
         </div>
       </div>
 
-      {/* Initial shortest path display */}
-      {initialChain && (
-        <div className="initial-path">
-          <strong>Shortest path:</strong>{' '}
-          {initialChain.map((node, i) => (
-            <span key={node.id}>
-              {node.title}
-              {i < initialChain.length - 1 ? ' → ' : ''}
-            </span>
-          ))}
-        </div>
-      )}
+      {/* Initial shortest path removed for better performance - use hint button instead */}
 
       {/* Hint button & display */}
-      <div className="hint-section">
+      <div className="hint-section animate-in animate-in-delay-3">
         <button onClick={fetchHint} className="hint-button">
-          Give me a hint
+          💡 Show Shortest Path
         </button>
         {hintChain && (
           <div className="hint">
-            <strong>Next step:</strong>{' '}
+            <strong>Shortest path:</strong>{' '}
             {hintChain.map((node, i) => (
               <span key={node.id}>
                 {node.title}
@@ -488,9 +447,9 @@ function App() {
 
       {/* Cast or filmography */}
       {selectedActor ? (
-        <div className="filmography-section">
+        <div className="filmography-section animate-in animate-in-delay-4">
           <h2>Movies with {selectedActor.name}</h2>
-          <button onClick={() => setSelectedActor(null)}>Back to Cast</button>
+          <button className="button-ghost" onClick={() => setSelectedActor(null)}>← Back to Cast</button>
           <div className="filmography-list">
             {filmography.map(m => (
               <div
@@ -515,7 +474,7 @@ function App() {
           </div>
         </div>
       ) : (
-        <div className="cast-section">
+        <div className="cast-section animate-in animate-in-delay-4">
           <h2>Select an Actor</h2>
           <div className="cast-list">
             {cast.map(a => (
@@ -542,66 +501,122 @@ function App() {
     </div>
   );
 
+  // Calculate achievement based on steps taken
+  const getAchievement = () => {
+    const steps = gameChain.length - 1;
+    if (steps === 1) return { emoji: '🏆', text: 'LEGENDARY! Perfect Connection!' };
+    if (steps === 2) return { emoji: '🥇', text: 'AMAZING! Near Perfect!' };
+    if (steps <= 4) return { emoji: '🥈', text: 'EXCELLENT! Great Job!' };
+    if (steps <= 6) return { emoji: '🥉', text: 'GOOD! Well Done!' };
+    return { emoji: '🎯', text: 'COMPLETED! Nice Work!' };
+  };
+
   // Result screen JSX
-  const renderResultScreen = () => (
-    <div className="result-screen">
-      <h1>You've reached the target movie!</h1>
-      <h2>Steps taken: {gameChain.length - 1}</h2>
-      <div className="final-chain">
-        {gameChain.map((item, idx) => (
-          <div key={idx} className="chain-item">
-            <div className="chain-movie">
-              <img
-                src={
-                  item.movie.poster_path
-                    ? POSTER_BASE_URL + item.movie.poster_path
-                    : '/api/placeholder/100/150'
-                }
-                alt={item.movie.title}
-              />
-              <h3>{item.movie.title}</h3>
-              <p>({item.movie.release_date?.slice(0, 4) || 'N/A'})</p>
+  const renderResultScreen = () => {
+    const achievement = getAchievement();
+    const steps = gameChain.length - 1;
+    
+    return (
+      <div className="result-screen page-transition">
+        {/* Victory Header */}
+        <div className="victory-header">
+          <h1>🎉 Victory!</h1>
+          <div className="achievement-badge">
+            <span>{achievement.emoji}</span>
+            <span>{achievement.text}</span>
+          </div>
+        </div>
+
+        {/* Victory Stats */}
+        <div className="victory-stats">
+          <h2>Mission Accomplished!</h2>
+          <div className="stats-grid">
+            <div className="stat-item">
+              <span className="stat-number">{steps}</span>
+              <span className="stat-label">Steps Taken</span>
             </div>
-            {item.actor && (
-              <>
-                <span className="chain-via">via</span>
-                <div className="chain-actor">
-                  <h3>{item.actor.name}</h3>
+            <div className="stat-item">
+              <span className="stat-number">{gameChain.length}</span>
+              <span className="stat-label">Total Movies</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Final Chain Display */}
+        <div className="final-chain">
+          <h3>🎬 Your Winning Path</h3>
+          <div className="chain-items">
+            {gameChain.map((item, idx) => (
+              <div key={idx} className="chain-item">
+                <div className="chain-movie">
                   <img
                     src={
-                      item.actor.profile_path
-                        ? POSTER_BASE_URL + item.actor.profile_path
+                      item.movie.poster_path
+                        ? POSTER_BASE_URL + item.movie.poster_path
                         : '/api/placeholder/100/150'
                     }
-                    alt={item.actor.name}
+                    alt={item.movie.title}
                   />
+                  <p>{item.movie.title}</p>
                 </div>
-              </>
-            )}
-            {idx < gameChain.length - 1 && (
-              <div className="chain-arrow">→</div>
-            )}
+                {item.actor && (
+                  <>
+                    <span className="chain-via">via</span>
+                    <div className="chain-actor">
+                      <img
+                        src={
+                          item.actor.profile_path
+                            ? POSTER_BASE_URL + item.actor.profile_path
+                            : '/api/placeholder/100/150'
+                        }
+                        alt={item.actor.name}
+                      />
+                      <p>{item.actor.name}</p>
+                    </div>
+                  </>
+                )}
+                {idx < gameChain.length - 1 && (
+                  <div className="chain-arrow">→</div>
+                )}
+              </div>
+            ))}
           </div>
-        ))}
+        </div>
+
+        {/* Action Buttons */}
+        <div className="victory-actions">
+          <button className="play-again-button" onClick={resetGame}>
+            🎮 Play Again
+          </button>
+          <button className="share-button button-secondary" onClick={() => {
+            const text = `🎬 I just connected ${gameChain[0].movie.title} to ${gameChain[gameChain.length-1].movie.title} in ${steps} steps! Can you beat that? #MovieConnections`;
+            if (navigator.share) {
+              navigator.share({ text });
+            } else {
+              navigator.clipboard.writeText(text);
+              setError('Victory message copied to clipboard! 🎉');
+              setTimeout(() => setError(null), 3000);
+            }
+          }}>
+            📤 Share Victory
+          </button>
+        </div>
       </div>
-      <button className="play-again-button" onClick={resetGame}>
-        Play Again
-      </button>
-    </div>
-  );
+    );
+  };
 
   return (
     <div className="app">
       {error && (
         <div className="error-message">
           <p>{error}</p>
-          <button onClick={() => setError(null)}>Dismiss</button>
+          <button onClick={() => setError(null)}>✕</button>
         </div>
       )}
       {isLoading ? (
         <div className="loading">
           <div className="spinner" />
-          <p>Loading...</p>
+          <p>Loading your movie connection...</p>
         </div>
       ) : (
         <>
