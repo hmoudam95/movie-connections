@@ -9,6 +9,91 @@ const POSTER_BASE_URL = 'https://image.tmdb.org/t/p/w300';
 // const API_BASE = process.env.REACT_APP_API_BASE_URL || '';
 
 
+// Skeleton Components
+const MovieCardSkeleton = () => (
+  <div className="movie-card-skeleton">
+    <div className="skeleton skeleton-poster"></div>
+    <div className="skeleton skeleton-title"></div>
+    <div className="skeleton skeleton-year"></div>
+  </div>
+);
+
+const ActorCardSkeleton = () => (
+  <div className="actor-card-skeleton">
+    <div className="skeleton skeleton-profile"></div>
+    <div className="skeleton skeleton-name"></div>
+    <div className="skeleton skeleton-character"></div>
+  </div>
+);
+
+// Actor Image Component with fallback
+const ActorImage = ({ actor, className = "" }) => {
+  const [imageError, setImageError] = useState(false);
+  const [imageLoading, setImageLoading] = useState(true);
+  
+  const getInitials = (name) => {
+    return name
+      .split(' ')
+      .map(word => word[0])
+      .join('')
+      .substring(0, 2)
+      .toUpperCase();
+  };
+  
+  const handleImageLoad = () => {
+    setImageLoading(false);
+    setImageError(false);
+  };
+  
+  const handleImageError = () => {
+    setImageLoading(false);
+    setImageError(true);
+  };
+  
+  if (!actor.profile_path || imageError) {
+    return (
+      <div className={`actor-placeholder ${className}`}>
+        <span className="actor-initials">{getInitials(actor.name)}</span>
+      </div>
+    );
+  }
+  
+  return (
+    <>
+      {imageLoading && <div className={`actor-loading ${className}`}></div>}
+      <img
+        className={`${className} ${imageLoading ? 'loading' : ''}`}
+        src={POSTER_BASE_URL + actor.profile_path}
+        alt={actor.name}
+        onLoad={handleImageLoad}
+        onError={handleImageError}
+        style={{ display: imageLoading ? 'none' : 'block' }}
+      />
+    </>
+  );
+};
+
+const ErrorState = ({ title, description, onRetry, retryText = "Try Again" }) => (
+  <div className="error-state fade-in">
+    <div className="error-icon">⚠️</div>
+    <div className="error-title">{title}</div>
+    <div className="error-description">{description}</div>
+    {onRetry && (
+      <button className="retry-button" onClick={onRetry}>
+        {retryText}
+      </button>
+    )}
+  </div>
+);
+
+const EmptyState = ({ icon, title, description }) => (
+  <div className="empty-state fade-in">
+    <div className="empty-state-icon">{icon}</div>
+    <div className="empty-state-text">{title}</div>
+    <div className="empty-state-description">{description}</div>
+  </div>
+);
+
 function App() {
   // Movie & game state
   const [startMovie, setStartMovie] = useState('');
@@ -21,34 +106,21 @@ function App() {
   // UI state
   const [cast, setCast] = useState([]);
   const [filmography, setFilmography] = useState([]);
-  const [searchStartResults, setSearchStartResults] = useState([]);
-  const [searchTargetResults, setSearchTargetResults] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
 
+  // Loading state for different components
+  const [randomLoading, setRandomLoading] = useState({ start: false, target: false });
+  const [actorLoading, setActorLoading] = useState(false);
+  const [hintLoading, setHintLoading] = useState(false);
+
+  // Error states for specific components
+  const [randomError, setRandomError] = useState({ start: null, target: null });
+  const [actorError, setActorError] = useState(null);
+  const [hintError, setHintError] = useState(null);
+
   // ** State for hint display **
   const [hintChain, setHintChain] = useState(null);
-
-  // Search for movies
-  const searchMovies = async (query, setResults) => {
-    if (!query.trim()) {
-      setResults([]);
-      return;
-    }
-    setIsLoading(true);
-    try {
-      const res = await fetch(
-        `${API_BASE_URL}/search/movie?api_key=${API_KEY}&query=${encodeURIComponent(query)}&include_adult=false`
-      );
-      const data = await res.json();
-      setResults(data.results.slice(0, 5));
-    } catch (err) {
-      setError('Failed to search movies');
-      console.error(err);
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   // Fetch movie details + credits
   const fetchMovieDetails = async (movieId) => {
@@ -69,7 +141,7 @@ function App() {
 
   // Fetch actor filmography
   const fetchActorFilmography = async (actorId) => {
-    setIsLoading(true);
+    setActorLoading(true);
     try {
       const res = await fetch(
         `${API_BASE_URL}/person/${actorId}/movie_credits?api_key=${API_KEY}`
@@ -88,26 +160,41 @@ function App() {
       setError("Failed to fetch actor's filmography");
       console.error(err);
     } finally {
-      setIsLoading(false);
+      setActorLoading(false);
     }
   };
 
   // Get a random blockbuster movie
   const getRandomMovie = useCallback(
     async (setMovie, isStart) => {
-      setIsLoading(true);
+      const randomType = isStart ? 'start' : 'target';
+      
+      // Set specific loading state
+      setRandomLoading(prev => ({ ...prev, [randomType]: true }));
+      setRandomError(prev => ({ ...prev, [randomType]: null }));
+      
       try {
         const today = new Date().toISOString().split('T')[0];
         const page = Math.floor(Math.random() * 5) + 1;
         const res = await fetch(
           `${API_BASE_URL}/discover/movie?api_key=${API_KEY}&sort_by=popularity.desc&vote_count.gte=1000&primary_release_date.lte=${today}&page=${page}`
         );
+        
+        if (!res.ok) {
+          throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+        }
+        
         const { results } = await res.json();
         const candidates = results.filter(m => m.poster_path);
+        
+        if (candidates.length === 0) {
+          throw new Error('No movies found with posters');
+        }
+        
         const choice = candidates[Math.floor(Math.random() * candidates.length)];
-        const details = await fetchMovieDetails(choice.id);
-
+        
         if (isStart) {
+          const details = await fetchMovieDetails(choice.id);
           setStartMovie(choice);
           setCurrentMovie(details);
           setCast(details.credits.cast.slice().sort((a, b) => a.order - b.order));
@@ -115,11 +202,13 @@ function App() {
         } else {
           setTargetMovie(choice);
         }
+        
+        setRandomError(prev => ({ ...prev, [randomType]: null }));
       } catch (err) {
-        setError('Failed to get random movie');
-        console.error(err);
+        console.error('Random movie error:', err);
+        setRandomError(prev => ({ ...prev, [randomType]: err.message }));
       } finally {
-        setIsLoading(false);
+        setRandomLoading(prev => ({ ...prev, [randomType]: false }));
       }
     },
     []
@@ -131,7 +220,7 @@ function App() {
     if (!targetMovie) getRandomMovie(setTargetMovie, false);
   }, [getRandomMovie, startMovie, targetMovie]);
 
-  // Handle manual selection
+  // Handle manual selection (now only for random movies)
   const handleMovieSelect = async (movie, isStart) => {
     const details = await fetchMovieDetails(movie.id);
     if (isStart) {
@@ -139,10 +228,8 @@ function App() {
       setCurrentMovie(details);
       setCast(details.credits.cast.slice().sort((a, b) => a.order - b.order));
       setGameChain([{ movie, actor: null }]);
-      setSearchStartResults([]);
     } else {
       setTargetMovie(movie);
-      setSearchTargetResults([]);
     }
   };
 
@@ -215,13 +302,16 @@ function App() {
       setGameState('setup');
       setError(null);
       setHintChain(null);
+      setRandomError({ start: null, target: null });
+      setActorError(null);
+      setHintError(null);
     }, 100);
   };
 
   // ** Fetch hint on button click **
   const fetchHint = async () => {
     if (!currentMovie?.id || !targetMovie?.id) return;
-    setIsLoading(true);
+    setHintLoading(true);
     try {
       const res = await fetch(
         `/api/path?fromMovieId=${currentMovie.id}&toMovieId=${targetMovie.id}`
@@ -233,7 +323,7 @@ function App() {
       console.error(err);
       setError('Failed to fetch hint');
     } finally {
-      setIsLoading(false);
+      setHintLoading(false);
     }
   };
 
@@ -250,31 +340,25 @@ function App() {
         {/* Starting Movie */}
         <div className="movie-selector">
           <h2>Starting Movie</h2>
-          <div className="search-container">
-            <input
-              type="text"
-              placeholder="Search for a movie..."
-              value={startMovie.title || ''}
-              onChange={e => {
-                setStartMovie('');
-                searchMovies(e.target.value, setSearchStartResults);
-              }}
+          <button 
+            className={`button-secondary ${randomLoading.start ? 'button-loading' : ''}`} 
+            onClick={() => getRandomMovie(setStartMovie, true)}
+            disabled={randomLoading.start}
+          >
+            🎲 Get Random Movie
+          </button>
+          
+          {randomLoading.start && <MovieCardSkeleton />}
+          {randomError.start && (
+            <ErrorState
+              title="Failed to Load Movie"
+              description={randomError.start}
+              onRetry={() => getRandomMovie(setStartMovie, true)}
+              retryText="Try Another Movie"
             />
-            <button className="button-secondary" onClick={() => getRandomMovie(setStartMovie, true)}>
-              Random
-            </button>
-          </div>
-          {searchStartResults.length > 0 && (
-            <ul className="search-results">
-              {searchStartResults.map(m => (
-                <li key={m.id} onClick={() => handleMovieSelect(m, true)}>
-                  {m.title} ({m.release_date?.slice(0, 4) || 'N/A'})
-                </li>
-              ))}
-            </ul>
           )}
-          {startMovie && (
-            <div className="selected-movie">
+          {!randomLoading.start && !randomError.start && startMovie && (
+            <div className="selected-movie fade-in">
               <img
                 src={
                   startMovie.poster_path
@@ -292,31 +376,25 @@ function App() {
         {/* Target Movie */}
         <div className="movie-selector">
           <h2>Target Movie</h2>
-          <div className="search-container">
-            <input
-              type="text"
-              placeholder="Search for a movie..."
-              value={targetMovie.title || ''}
-              onChange={e => {
-                setTargetMovie('');
-                searchMovies(e.target.value, setSearchTargetResults);
-              }}
+          <button 
+            className={`button-secondary ${randomLoading.target ? 'button-loading' : ''}`} 
+            onClick={() => getRandomMovie(setTargetMovie, false)}
+            disabled={randomLoading.target}
+          >
+            🎲 Get Random Movie
+          </button>
+          
+          {randomLoading.target && <MovieCardSkeleton />}
+          {randomError.target && (
+            <ErrorState
+              title="Failed to Load Movie"
+              description={randomError.target}
+              onRetry={() => getRandomMovie(setTargetMovie, false)}
+              retryText="Try Another Movie"
             />
-            <button className="button-secondary" onClick={() => getRandomMovie(setTargetMovie, false)}>
-              Random
-            </button>
-          </div>
-          {searchTargetResults.length > 0 && (
-            <ul className="search-results">
-              {searchTargetResults.map(m => (
-                <li key={m.id} onClick={() => handleMovieSelect(m, false)}>
-                  {m.title} ({m.release_date?.slice(0, 4) || 'N/A'})
-                </li>
-              ))}
-            </ul>
           )}
-          {targetMovie && (
-            <div className="selected-movie">
+          {!randomLoading.target && !randomError.target && targetMovie && (
+            <div className="selected-movie fade-in">
               <img
                 src={
                   targetMovie.poster_path
@@ -386,15 +464,8 @@ function App() {
                 <>
                   <span className="chain-via">via</span>
                   <div className="chain-actor">
+                    <ActorImage actor={item.actor} />
                     <p>{item.actor.name}</p>
-                    <img
-                      src={
-                        item.actor.profile_path
-                          ? POSTER_BASE_URL + item.actor.profile_path
-                          : '/api/placeholder/100/150'
-                      }
-                      alt={item.actor.name}
-                    />
                   </div>
                 </>
               )}
@@ -429,11 +500,21 @@ function App() {
 
       {/* Hint button & display */}
       <div className="hint-section animate-in animate-in-delay-3">
-        <button onClick={fetchHint} className="hint-button">
+        <button 
+          onClick={fetchHint} 
+          className={`hint-button ${hintLoading ? 'button-loading' : ''}`}
+          disabled={hintLoading}
+        >
           💡 Show Shortest Path
         </button>
-        {hintChain && (
-          <div className="hint">
+        {hintLoading && (
+          <div className="loading-content">
+            <div className="loading-spinner"></div>
+            <div className="loading-text">Finding optimal path...</div>
+          </div>
+        )}
+        {!hintLoading && hintChain && (
+          <div className="hint fade-in">
             <strong>Shortest path:</strong>{' '}
             {hintChain.map((node, i) => (
               <span key={node.id}>
@@ -450,47 +531,48 @@ function App() {
         <div className="filmography-section animate-in animate-in-delay-4">
           <h2>Movies with {selectedActor.name}</h2>
           <button className="button-ghost" onClick={() => setSelectedActor(null)}>← Back to Cast</button>
-          <div className="filmography-list">
-            {filmography.map(m => (
-              <div
-                key={m.id}
-                className="filmography-item"
-                onClick={() => handleFilmographySelect(m)}
-              >
-                <img
-                  src={
-                    m.poster_path
-                      ? POSTER_BASE_URL + m.poster_path
-                      : '/api/placeholder/100/150'
-                  }
-                  alt={m.title}
-                />
-                <div className="movie-info">
-                  <h3>{m.title}</h3>
-                  <p>({m.release_date?.slice(0, 4) || 'N/A'})</p>
+          {actorLoading ? (
+            <div className="skeleton-grid">
+              {[...Array(8)].map((_, i) => (
+                <ActorCardSkeleton key={i} />
+              ))}
+            </div>
+          ) : (
+            <div className="filmography-list stagger-grid">
+              {filmography.map(m => (
+                <div
+                  key={m.id}
+                  className="filmography-item"
+                  onClick={() => handleFilmographySelect(m)}
+                >
+                  <img
+                    src={
+                      m.poster_path
+                        ? POSTER_BASE_URL + m.poster_path
+                        : '/api/placeholder/100/150'
+                    }
+                    alt={m.title}
+                  />
+                  <div className="movie-info">
+                    <h3>{m.title}</h3>
+                    <p>({m.release_date?.slice(0, 4) || 'N/A'})</p>
+                  </div>
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </div>
       ) : (
         <div className="cast-section animate-in animate-in-delay-4">
           <h2>Select an Actor</h2>
-          <div className="cast-list">
+          <div className="cast-list stagger-grid">
             {cast.map(a => (
               <div
                 key={a.id}
                 className="cast-item"
                 onClick={() => handleActorSelect(a)}
               >
-                <img
-                  src={
-                    a.profile_path
-                      ? POSTER_BASE_URL + a.profile_path
-                      : '/api/placeholder/100/150'
-                  }
-                  alt={a.name}
-                />
+                <ActorImage actor={a} />
                 <p>{a.name}</p>
                 <p className="character">as {a.character}</p>
               </div>
@@ -563,14 +645,7 @@ function App() {
                   <>
                     <span className="chain-via">via</span>
                     <div className="chain-actor">
-                      <img
-                        src={
-                          item.actor.profile_path
-                            ? POSTER_BASE_URL + item.actor.profile_path
-                            : '/api/placeholder/100/150'
-                        }
-                        alt={item.actor.name}
-                      />
+                      <ActorImage actor={item.actor} />
                       <p>{item.actor.name}</p>
                     </div>
                   </>
