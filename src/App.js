@@ -147,7 +147,6 @@ function App() {
 
   // ** Mobile-specific state **
   const [isMobile, setIsMobile] = useState(false);
-  const [showMobileNav, setShowMobileNav] = useState(false);
 
   // Mobile detection
   useEffect(() => {
@@ -155,13 +154,12 @@ function App() {
       const mobile = window.innerWidth <= 768 || 
         /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
       setIsMobile(mobile);
-      setShowMobileNav(mobile && gameState === 'playing');
     };
     
     checkMobile();
     window.addEventListener('resize', checkMobile);
     return () => window.removeEventListener('resize', checkMobile);
-  }, [gameState]);
+  }, []);
 
   // Fetch movie details + credits
   const fetchMovieDetails = async (movieId) => {
@@ -796,76 +794,9 @@ function App() {
     }
   };
 
-  // Mobile bottom navigation component
-  const MobileBottomNav = () => {
-    if (!isMobile || !showMobileNav) return null;
+  // Removed mobile bottom navigation - keeping interface clean and minimalistic
 
-    return (
-      <div className={`mobile-bottom-nav ${showMobileNav ? 'visible' : ''}`}>
-        <div className="mobile-nav-content">
-          <button 
-            className="mobile-nav-action thumb-zone"
-            onClick={() => setShowTargetCast(!showTargetCast)}
-          >
-            <span className="mobile-nav-icon">🎯</span>
-            <span>Target</span>
-          </button>
-          
-          <button 
-            className="mobile-nav-action thumb-zone"
-            onClick={fetchHint}
-            disabled={hintLoading}
-          >
-            <span className="mobile-nav-icon">💡</span>
-            <span>{backgroundHintReady ? 'Show' : 'Hint'}</span>
-          </button>
-          
-          <button 
-            className="mobile-nav-action thumb-zone"
-            onClick={() => selectedActor ? setSelectedActor(null) : null}
-          >
-            <span className="mobile-nav-icon">{selectedActor ? '←' : '👥'}</span>
-            <span>{selectedActor ? 'Back' : 'Cast'}</span>
-          </button>
-          
-          <button 
-            className="mobile-nav-action thumb-zone"
-            onClick={resetGame}
-          >
-            <span className="mobile-nav-icon">🔄</span>
-            <span>Reset</span>
-          </button>
-        </div>
-      </div>
-    );
-  };
-
-  // Mobile floating action button
-  const MobileFAB = () => {
-    if (!isMobile) return null;
-
-    const fabAction = () => {
-      if (gameState === 'setup') startGame();
-      else if (gameState === 'playing') fetchHint();
-      else if (gameState === 'complete') resetGame();
-    };
-
-    const fabIcon = () => {
-      if (gameState === 'setup') return '▶';
-      else if (gameState === 'playing') return '💡';
-      else if (gameState === 'complete') return '🔄';
-      return '●';
-    };
-
-    return (
-      <button 
-        className={`mobile-fab ${isMobile ? 'visible' : ''}`}
-        onClick={fabAction}
-      >
-        {fabIcon()}
-      </button>
-    );
-  };
+  // Removed mobile FAB - keeping interface clean and minimalistic
 
   // Calculate achievement based on steps taken
   const getAchievement = () => {
@@ -986,9 +917,7 @@ function App() {
         </div>
       )}
       
-      {/* Mobile Components */}
-      <MobileBottomNav />
-      <MobileFAB />
+      {/* Mobile components removed for cleaner minimalistic design */}
       
       {/* Compact Target Cast Overlay */}
       <AnimatePresence>
@@ -1159,21 +1088,9 @@ function App() {
         </div>
       ) : (
         <>
-          {gameState === 'setup' && (
-            <div className={isMobile ? 'setup-screen mobile-optimized' : ''}>
-              {renderSetupScreen()}
-            </div>
-          )}
-          {gameState === 'playing' && (
-            <div className={isMobile ? 'game-board mobile-optimized' : ''}>
-              {renderGameBoard()}
-            </div>
-          )}
-          {gameState === 'complete' && (
-            <div className={isMobile ? 'result-screen mobile-optimized' : ''}>
-              {renderResultScreen()}
-            </div>
-          )}
+          {gameState === 'setup' && renderSetupScreen()}
+          {gameState === 'playing' && renderGameBoard()}
+          {gameState === 'complete' && renderResultScreen()}
         </>
       )}
     </motion.div>
