@@ -145,6 +145,24 @@ function App() {
   const [targetMovieCast, setTargetMovieCast] = useState([]);
   const [targetCastLoading, setTargetCastLoading] = useState(false);
 
+  // ** Mobile-specific state **
+  const [isMobile, setIsMobile] = useState(false);
+  const [showMobileNav, setShowMobileNav] = useState(false);
+
+  // Mobile detection
+  useEffect(() => {
+    const checkMobile = () => {
+      const mobile = window.innerWidth <= 768 || 
+        /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+      setIsMobile(mobile);
+      setShowMobileNav(mobile && gameState === 'playing');
+    };
+    
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, [gameState]);
+
   // Fetch movie details + credits
   const fetchMovieDetails = async (movieId) => {
     setIsLoading(true);
@@ -754,6 +772,101 @@ function App() {
     </div>
   );
 
+  // Swipe gesture handlers
+  const handleSwipeLeft = () => {
+    if (gameState === 'setup') {
+      startGame();
+    } else if (gameState === 'playing') {
+      // Could show hint or target cast
+      if (!hintChain) fetchHint();
+    }
+  };
+
+  const handleSwipeRight = () => {
+    if (gameState === 'playing') {
+      resetGame();
+    } else if (gameState === 'complete') {
+      resetGame();
+    }
+  };
+
+  const handleSwipeUp = () => {
+    if (gameState === 'playing' && !showTargetCast) {
+      setShowTargetCast(true);
+    }
+  };
+
+  // Mobile bottom navigation component
+  const MobileBottomNav = () => {
+    if (!isMobile || !showMobileNav) return null;
+
+    return (
+      <div className={`mobile-bottom-nav ${showMobileNav ? 'visible' : ''}`}>
+        <div className="mobile-nav-content">
+          <button 
+            className="mobile-nav-action thumb-zone"
+            onClick={() => setShowTargetCast(!showTargetCast)}
+          >
+            <span className="mobile-nav-icon">🎯</span>
+            <span>Target</span>
+          </button>
+          
+          <button 
+            className="mobile-nav-action thumb-zone"
+            onClick={fetchHint}
+            disabled={hintLoading}
+          >
+            <span className="mobile-nav-icon">💡</span>
+            <span>{backgroundHintReady ? 'Show' : 'Hint'}</span>
+          </button>
+          
+          <button 
+            className="mobile-nav-action thumb-zone"
+            onClick={() => selectedActor ? setSelectedActor(null) : null}
+          >
+            <span className="mobile-nav-icon">{selectedActor ? '←' : '👥'}</span>
+            <span>{selectedActor ? 'Back' : 'Cast'}</span>
+          </button>
+          
+          <button 
+            className="mobile-nav-action thumb-zone"
+            onClick={resetGame}
+          >
+            <span className="mobile-nav-icon">🔄</span>
+            <span>Reset</span>
+          </button>
+        </div>
+      </div>
+    );
+  };
+
+  // Mobile floating action button
+  const MobileFAB = () => {
+    if (!isMobile) return null;
+
+    const fabAction = () => {
+      if (gameState === 'setup') startGame();
+      else if (gameState === 'playing') fetchHint();
+      else if (gameState === 'complete') resetGame();
+    };
+
+    const fabIcon = () => {
+      if (gameState === 'setup') return '▶';
+      else if (gameState === 'playing') return '💡';
+      else if (gameState === 'complete') return '🔄';
+      return '●';
+    };
+
+    return (
+      <button 
+        className={`mobile-fab ${isMobile ? 'visible' : ''}`}
+        onClick={fabAction}
+      >
+        {fabIcon()}
+      </button>
+    );
+  };
+
   // Calculate achievement based on steps taken
   const getAchievement = () => {
     const steps = gameChain.length - 1;
@@ -852,13 +965,30 @@ function App() {
   };
 
   return (
-    <div className="app">
+    <motion.div 
+      className="app"
+      drag={isMobile ? "x" : false}
+      dragConstraints={{ left: 0, right: 0 }}
+      onDragEnd={(event, info) => {
+        if (Math.abs(info.offset.x) > 100) {
+          if (info.offset.x > 0) {
+            handleSwipeRight();
+          } else {
+            handleSwipeLeft();
+          }
+        }
+      }}
+    >
       {error && (
         <div className="error-message">
           <p>{error}</p>
           <button onClick={() => setError(null)}>✕</button>
         </div>
       )}
+      
+      {/* Mobile Components */}
+      <MobileBottomNav />
+      <MobileFAB />
       
       {/* Compact Target Cast Overlay */}
       <AnimatePresence>
@@ -1029,12 +1159,24 @@ function App() {
         </div>
       ) : (
         <>
-          {gameState === 'setup' && renderSetupScreen()}
-          {gameState === 'playing' && renderGameBoard()}
-          {gameState === 'complete' && renderResultScreen()}
+          {gameState === 'setup' && (
+            <div className={isMobile ? 'setup-screen mobile-optimized' : ''}>
+              {renderSetupScreen()}
+            </div>
+          )}
+          {gameState === 'playing' && (
+            <div className={isMobile ? 'game-board mobile-optimized' : ''}>
+              {renderGameBoard()}
+            </div>
+          )}
+          {gameState === 'complete' && (
+            <div className={isMobile ? 'result-screen mobile-optimized' : ''}>
+              {renderResultScreen()}
+            </div>
+          )}
         </>
       )}
-    </div>
+    </motion.div>
   );
 }
 
