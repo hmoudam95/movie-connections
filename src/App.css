@@ -1,4 +1,33 @@
 /* App.css - Modern Game UI Design System */
+
+/* Background hint ready button styling */
+.hint-button.hint-ready {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: #ffffff;
+  border-color: #10b981;
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+  animation: pulse-ready 2s infinite;
+}
+
+.hint-button.hint-ready:hover {
+  background: linear-gradient(135deg, #059669 0%, #047857 100%);
+  box-shadow: 0 6px 16px rgba(16, 185, 129, 0.4);
+  transform: translateY(-1px);
+}
+
+@keyframes pulse-ready {
+  0%, 100% {
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+  }
+  50% {
+    box-shadow: 0 4px 16px rgba(16, 185, 129, 0.5);
+  }
+}
+
+.background-hint-status {
+  margin-top: 0.5rem;
+  text-align: center;
+}
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
 
 * {
@@ -512,17 +541,168 @@ input[type="text"]::placeholder {
 }
 
 .selected-movie h3 {
-  font-size: 1.25rem;
   margin-bottom: var(--space-xs);
   color: var(--text-primary);
   font-weight: 600;
   line-height: 1.2;
+  height: 2.4rem;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  text-align: center;
+  hyphens: auto;
+  word-break: break-word;
 }
 
 .selected-movie p {
   color: var(--text-secondary);
   font-size: 0.875rem;
   margin: 0;
+}
+
+/* Network Graph Styles */
+.target-info {
+  position: relative;
+}
+
+.target-movie {
+  transition: all 0.2s ease;
+}
+
+.target-movie:hover {
+  transform: scale(1.02);
+}
+
+.network-graph-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 400px;
+  height: 400px;
+  transform: translate(-50%, -50%);
+  left: 50%;
+  top: 50%;
+  pointer-events: none;
+  z-index: 100;
+}
+
+.actor-connection {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+}
+
+.poster-connection-line {
+  position: absolute;
+  height: 3px;
+  background: linear-gradient(90deg, var(--accent-primary), #fb923c);
+  z-index: 1;
+  box-shadow: 0 0 10px rgba(99, 102, 241, 0.5);
+}
+
+.connection-label {
+  position: absolute;
+  top: -15px;
+  left: 60%;
+  transform: translateX(-50%);
+  font-size: 0.6rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  white-space: nowrap;
+  background: var(--bg-primary);
+  padding: 2px 6px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+}
+
+.actor-node-connected {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  z-index: 10;
+}
+
+.actor-avatar-connected {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: #fb923c;
+  border-radius: 50%;
+  padding: var(--space-xs);
+  border: 3px solid #ea580c;
+  box-shadow: var(--shadow-lg);
+  transition: all 0.2s ease;
+  pointer-events: auto;
+}
+
+.actor-avatar-connected:hover {
+  transform: scale(1.1);
+  box-shadow: 0 0 20px rgba(251, 146, 60, 0.6);
+  border-color: #c2410c;
+}
+
+.actor-avatar-connected img {
+  width: 45px;
+  height: 45px;
+  border-radius: 50%;
+  object-fit: cover;
+  margin-bottom: var(--space-xs);
+  border: 2px solid white;
+}
+
+.actor-placeholder-connected {
+  width: 45px;
+  height: 45px;
+  border-radius: 50%;
+  background: #ea580c;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: var(--space-xs);
+  border: 2px solid white;
+}
+
+.actor-placeholder-connected .actor-initials {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: white;
+}
+
+.actor-name-connected {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: white;
+  text-align: center;
+  max-width: 70px;
+  line-height: 1.1;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.7);
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .network-graph-overlay {
+    width: 300px;
+    height: 300px;
+  }
+  
+  .actor-avatar-connected img {
+    width: 35px;
+    height: 35px;
+  }
+  
+  .actor-placeholder-connected {
+    width: 35px;
+    height: 35px;
+  }
+  
+  .connection-label {
+    font-size: 0.5rem;
+    left: 50%;
+  }
 }
 
 .start-button {

@@ -134,6 +134,12 @@ function App() {
   // ** State for hint display **
   const [hintChain, setHintChain] = useState(null);
 
+  // ** Background hint fetching states **
+  const [backgroundHintFetching, setBackgroundHintFetching] = useState(false);
+  const [backgroundHintReady, setBackgroundHintReady] = useState(false);
+  const [backgroundFetchController, setBackgroundFetchController] = useState(null);
+  const [cachedHintChain, setCachedHintChain] = useState(null); // Store background result separately
+
   // ** State for target movie cast preview **
   const [showTargetCast, setShowTargetCast] = useState(false);
   const [targetMovieCast, setTargetMovieCast] = useState([]);
@@ -333,6 +339,12 @@ function App() {
     }
   };
   const resetGame = () => {
+    // Cancel any ongoing background fetch
+    if (backgroundFetchController) {
+      backgroundFetchController.abort();
+      setBackgroundFetchController(null);
+    }
+    
     // Add a small delay for smooth transition
     setTimeout(() => {
       setStartMovie('');
@@ -351,16 +363,99 @@ function App() {
       setShowTargetCast(false);
       setTargetMovieCast([]);
       setTargetCastLoading(false);
+      
+      // Reset background hint states
+      setBackgroundHintFetching(false);
+      setBackgroundHintReady(false);
+      setBackgroundFetchController(null);
+      setCachedHintChain(null);
     }, 100);
   };
 
-  // ** Fetch hint on button click **
+  // ** Background hint fetching (silent, non-blocking) **
+  const fetchHintInBackground = useCallback(async () => {
+    if (!currentMovie?.id || !targetMovie?.id) return;
+    if (backgroundHintReady || backgroundHintFetching) return; // Avoid duplicate fetches
+
+    // Create AbortController for cancellation
+    const controller = new AbortController();
+    setBackgroundFetchController(controller);
+    setBackgroundHintFetching(true);
+    
+    try {
+      const res = await fetch(
+        `http://localhost:4000/api/path?fromMovieId=${currentMovie.id}&toMovieId=${targetMovie.id}`,
+        { signal: controller.signal }
+      );
+      
+      if (controller.signal.aborted) return;
+      
+      const data = await res.json();
+      if (!data.error && data.chain) {
+        setCachedHintChain(data.chain); // Store in cache, don't display yet
+        setBackgroundHintReady(true);
+      }
+      // Silent error handling - don't show errors to user for background fetches
+    } catch (err) {
+      if (!controller.signal.aborted) {
+        console.log('Background hint fetch failed (silent):', err.message);
+      }
+    } finally {
+      if (!controller.signal.aborted) {
+        setBackgroundHintFetching(false);
+        setBackgroundFetchController(null);
+      }
+    }
+  }, [currentMovie?.id, targetMovie?.id, backgroundHintReady, backgroundHintFetching]);
+
+  // ** Fetch hint on button click (now uses cached results when available) **
   const fetchHint = async () => {
     if (!currentMovie?.id || !targetMovie?.id) return;
+    
+    // If background fetch completed, show cached results instantly
+    if (backgroundHintReady && cachedHintChain) {
+      setHintChain(cachedHintChain); // Display the cached result
+      return;
+    }
+    
+    // If background fetch is in progress, wait for it
+    if (backgroundHintFetching) {
+      setHintLoading(true);
+      
+      // Set up a listener for background fetch completion
+      const checkBackgroundComplete = setInterval(() => {
+        if (backgroundHintReady && cachedHintChain) {
+          setHintChain(cachedHintChain); // Display cached result
+          setHintLoading(false);
+          clearInterval(checkBackgroundComplete);
+        } else if (!backgroundHintFetching) {
+          // Background fetch failed, start traditional fetch
+          clearInterval(checkBackgroundComplete);
+          traditionalFetch();
+        }
+      }, 100);
+      
+      // Timeout fallback (10 seconds)
+      setTimeout(() => {
+        if (hintLoading) {
+          clearInterval(checkBackgroundComplete);
+          traditionalFetch();
+        }
+      }, 10000);
+      
+      return;
+    }
+    
+    // Start traditional fetch immediately
+    traditionalFetch();
+  };
+
+  // Helper function for traditional hint fetching
+  const traditionalFetch = async () => {
     setHintLoading(true);
     try {
       const res = await fetch(
-        `/api/path?fromMovieId=${currentMovie.id}&toMovieId=${targetMovie.id}`
+        `http://localhost:4000/api/path?fromMovieId=${currentMovie.id}&toMovieId=${targetMovie.id}`
       );
       const data = await res.json();
       if (data.error) setError(data.error);
@@ -372,6 +467,27 @@ function App() {
       setHintLoading(false);
     }
   };
+
+  // ** Background hint fetching when game starts **
+  useEffect(() => {
+    if (gameState === 'playing' && currentMovie?.id && targetMovie?.id) {
+      // Smart delay: Give user time to look at the interface before fetching
+      const timer = setTimeout(() => {
+        fetchHintInBackground();
+      }, 2000); // 2 second delay for optimal UX
+
+      return () => clearTimeout(timer);
+    }
+  }, [gameState, currentMovie?.id, targetMovie?.id, fetchHintInBackground]);
+
+  // ** Cleanup on component unmount **
+  useEffect(() => {
+    return () => {
+      if (backgroundFetchController) {
+        backgroundFetchController.abort();
+      }
+    };
+  }, [backgroundFetchController]);
 
   // ** Removed auto-fetch for better performance **
   // Initial shortest path is now only fetched when user clicks "Give me a hint"
@@ -557,10 +673,10 @@ function App() {
       <div className="hint-section animate-in animate-in-delay-3">
         <button 
           onClick={fetchHint} 
-          className={`hint-button ${hintLoading ? 'button-loading' : ''}`}
+          className={`hint-button ${hintLoading ? 'button-loading' : ''} ${backgroundHintReady && cachedHintChain ? 'hint-ready' : ''}`}
           disabled={hintLoading}
         >
-          💡 Show Shortest Path
+          {backgroundHintReady && cachedHintChain ? '⚡ Show Shortest Path (Ready)' : '💡 Show Shortest Path'}
         </button>
         {hintLoading && (
           <div className="loading-content">
