@@ -604,29 +604,52 @@ function App() {
   // Game board JSX
   const renderGameBoard = () => (
     <div className="game-board page-transition">
-      {/* Target info & steps */}
-      <div className="game-info animate-in">
-        <div className="target-info">
-          <h3>Target Movie:</h3>
-          <div 
-            className="target-movie"
-            onClick={() => setShowTargetCast(!showTargetCast)}
-            style={{ cursor: 'pointer' }}
-          >
-            <img
-              src={
-                targetMovie.poster_path
-                  ? POSTER_BASE_URL + targetMovie.poster_path
-                  : '/api/placeholder/100/150'
-              }
-              alt={targetMovie.title}
-            />
-            <p>{targetMovie.title}</p>
+      {/* Compact movie header - Target and Current side by side */}
+      <div className="movies-header animate-in">
+        <div className="header-content">
+          <div className="movie-pair">
+            <div className="target-section">
+              <h4>Target:</h4>
+              <div 
+                className="compact-movie-card"
+                onClick={() => setShowTargetCast(!showTargetCast)}
+                style={{ cursor: 'pointer' }}
+              >
+                <img
+                  src={
+                    targetMovie.poster_path
+                      ? POSTER_BASE_URL + targetMovie.poster_path
+                      : '/api/placeholder/80/120'
+                  }
+                  alt={targetMovie.title}
+                />
+                <div className="movie-title">{targetMovie.title}</div>
+              </div>
+            </div>
+            
+            <div className="vs-divider">
+              <span className="vs-icon">→</span>
+              <div className="steps-counter">
+                <span className="steps-number">{gameChain.length - 1}</span>
+                <span className="steps-label">steps</span>
+              </div>
+            </div>
+            
+            <div className="current-section">
+              <h4>Current:</h4>
+              <div className="compact-movie-card">
+                <img
+                  src={
+                    currentMovie.poster_path
+                      ? POSTER_BASE_URL + currentMovie.poster_path
+                      : '/api/placeholder/80/120'
+                  }
+                  alt={currentMovie.title}
+                />
+                <div className="movie-title">{currentMovie.title}</div>
+              </div>
+            </div>
           </div>
-          
-        </div>
-        <div className="steps-info">
-          <h3>Steps: {gameChain.length - 1}</h3>
         </div>
       </div>
 
@@ -661,25 +684,6 @@ function App() {
               )}
             </div>
           ))}
-        </div>
-      </div>
-
-      {/* Current movie */}
-      <div className="current-movie animate-in animate-in-delay-2">
-        <h2>Current Movie</h2>
-        <div className="movie-details">
-          <img
-            src={
-              currentMovie.poster_path
-                ? POSTER_BASE_URL + currentMovie.poster_path
-                : '/api/placeholder/200/300'
-            }
-            alt={currentMovie.title}
-          />
-          <div className="movie-info">
-            <h3>{currentMovie.title}</h3>
-            <p>({currentMovie.release_date?.slice(0, 4) || 'N/A'})</p>
-          </div>
         </div>
       </div>
 
