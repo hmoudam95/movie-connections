@@ -608,6 +608,29 @@ function App() {
       <div className="movies-header animate-in">
         <div className="header-content">
           <div className="movie-pair">
+            <div className="current-section">
+              <h4>Current:</h4>
+              <div className="compact-movie-card">
+                <img
+                  src={
+                    currentMovie.poster_path
+                      ? POSTER_BASE_URL + currentMovie.poster_path
+                      : '/api/placeholder/80/120'
+                  }
+                  alt={currentMovie.title}
+                />
+                <div className="movie-title">{currentMovie.title}</div>
+              </div>
+            </div>
+            
+            <div className="vs-divider">
+              <span className="vs-icon">→</span>
+              <div className="steps-counter">
+                <span className="steps-number">{gameChain.length - 1}</span>
+                <span className="steps-label">steps</span>
+              </div>
+            </div>
+            
             <div className="target-section">
               <h4>Target:</h4>
               <div 
@@ -624,29 +647,6 @@ function App() {
                   alt={targetMovie.title}
                 />
                 <div className="movie-title">{targetMovie.title}</div>
-              </div>
-            </div>
-            
-            <div className="vs-divider">
-              <span className="vs-icon">→</span>
-              <div className="steps-counter">
-                <span className="steps-number">{gameChain.length - 1}</span>
-                <span className="steps-label">steps</span>
-              </div>
-            </div>
-            
-            <div className="current-section">
-              <h4>Current:</h4>
-              <div className="compact-movie-card">
-                <img
-                  src={
-                    currentMovie.poster_path
-                      ? POSTER_BASE_URL + currentMovie.poster_path
-                      : '/api/placeholder/80/120'
-                  }
-                  alt={currentMovie.title}
-                />
-                <div className="movie-title">{currentMovie.title}</div>
               </div>
             </div>
           </div>
