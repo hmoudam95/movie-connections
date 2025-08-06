@@ -923,137 +923,51 @@ function App() {
       
       {/* Mobile components removed for cleaner minimalistic design */}
       
-      {/* Compact Target Cast Overlay */}
+      {/* Mobile-First Target Cast Overlay */}
       <AnimatePresence>
         {showTargetCast && (
           <motion.div
-            className="target-cast-overlay"
-            initial={{ opacity: 0, scale: 0.8 }}
+            className="cast-overlay"
+            initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.8 }}
+            exit={{ opacity: 0, scale: 0.9 }}
             transition={{ duration: 0.2 }}
-            style={{
-              position: 'fixed',
-              top: '50%',
-              left: '50%',
-              transform: 'translate(-50%, -50%)',
-              zIndex: 1000,
-              backgroundColor: 'rgba(255, 255, 255, 0.02)', // matches --surface
-              border: '1px solid rgba(255, 255, 255, 0.08)', // matches --border
-              borderRadius: '1rem', // matches --radius-xl
-              padding: '1.5rem',
-              width: '360px',
-              maxHeight: '480px',
-              overflowY: 'auto',
-              backdropFilter: 'blur(20px)',
-              boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.6)'
-            }}
           >
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-              <h4 style={{ margin: 0, fontSize: '1.1rem', color: '#ffffff', fontWeight: '600' }}>Cast Preview</h4>
+            <div className="cast-overlay-header">
+              <h4 className="cast-overlay-title">Cast Preview</h4>
               <button 
+                className="cast-overlay-close"
                 onClick={() => setShowTargetCast(false)}
-                style={{
-                  background: 'rgba(255, 255, 255, 0.05)',
-                  border: '1px solid rgba(255, 255, 255, 0.08)',
-                  borderRadius: '0.5rem',
-                  color: '#a1a1aa',
-                  fontSize: '1.1rem',
-                  cursor: 'pointer',
-                  padding: '0.5rem',
-                  width: '32px',
-                  height: '32px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  transition: 'all 0.2s ease'
-                }}
-                onMouseEnter={(e) => {
-                  e.target.style.background = 'rgba(255, 255, 255, 0.08)';
-                  e.target.style.color = '#ffffff';
-                }}
-                onMouseLeave={(e) => {
-                  e.target.style.background = 'rgba(255, 255, 255, 0.05)';
-                  e.target.style.color = '#a1a1aa';
-                }}
               >
                 ✕
               </button>
             </div>
             {targetCastLoading ? (
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem' }}>
-                {[...Array(6)].map((_, i) => (
-                  <div key={i} style={{ textAlign: 'center' }}>
-                    <div style={{ 
-                      width: '64px', 
-                      height: '64px', 
-                      backgroundColor: 'rgba(255, 255, 255, 0.05)', 
-                      borderRadius: '50%',
-                      margin: '0 auto 0.5rem',
-                      animation: 'pulse 1.5s ease-in-out infinite'
-                    }} />
-                    <div style={{
-                      width: '80%',
-                      height: '12px',
-                      backgroundColor: 'rgba(255, 255, 255, 0.05)',
-                      borderRadius: '4px',
-                      margin: '0 auto',
-                      animation: 'pulse 1.5s ease-in-out infinite'
-                    }} />
+              <div className="cast-grid">
+                {[...Array(8)].map((_, i) => (
+                  <div key={i} className="cast-item-skeleton">
+                    <div className="cast-avatar-skeleton" />
+                    <div className="cast-name-skeleton" />
                   </div>
                 ))}
               </div>
             ) : (
-              <div style={{ 
-                display: 'grid', 
-                gridTemplateColumns: 'repeat(3, 1fr)', 
-                gap: '1rem',
-                maxHeight: '360px',
-                overflowY: 'auto'
-              }}>
+              <div className="cast-grid">
                 {targetMovieCast.slice(0, 12).map(actor => (
-                  <div key={actor.id} style={{ textAlign: 'center' }}>
-                    <div style={{ 
-                      width: '64px', 
-                      height: '64px', 
-                      margin: '0 auto 0.5rem',
-                      borderRadius: '50%',
-                      overflow: 'hidden',
-                      backgroundColor: 'rgba(255, 255, 255, 0.05)',
-                      border: '1px solid rgba(255, 255, 255, 0.08)'
-                    }}>
+                  <div key={actor.id} className="cast-item">
+                    <div className="cast-avatar">
                       {actor.profile_path ? (
                         <img
                           src={POSTER_BASE_URL + actor.profile_path}
                           alt={actor.name}
-                          style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                         />
                       ) : (
-                        <div style={{
-                          width: '100%',
-                          height: '100%',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          backgroundColor: 'rgba(255, 255, 255, 0.05)',
-                          color: '#a1a1aa',
-                          fontSize: '0.8rem',
-                          fontWeight: '600'
-                        }}>
+                        <div className="cast-placeholder">
                           {actor.name.split(' ').map(word => word[0]).join('').substring(0, 2).toUpperCase()}
                         </div>
                       )}
                     </div>
-                    <p style={{ 
-                      margin: 0, 
-                      fontSize: '0.75rem', 
-                      color: '#ffffff',
-                      lineHeight: '1.3',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      whiteSpace: 'nowrap',
-                      fontWeight: '500'
-                    }}>
+                    <p className="cast-name">
                       {actor.name}
                     </p>
                   </div>
