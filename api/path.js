@@ -25,6 +25,15 @@ const getNeo4jConfig = () => {
 };
 
 const config = getNeo4jConfig();
+
+// DEBUG: log what env vars the function actually sees (truncated for safety)
+console.log('🔧 DEBUG NEO4J_URI:', (process.env.NEO4J_URI || 'UNSET').substring(0, 25) + '...');
+console.log('🔧 DEBUG NEO4J_USER:', (process.env.NEO4J_USER || 'UNSET').substring(0, 10) + '...');
+console.log('🔧 DEBUG NEO4J_PASSWORD set:', !!process.env.NEO4J_PASSWORD, 'length:', (process.env.NEO4J_PASSWORD || '').length);
+console.log('🔧 DEBUG VERCEL:', process.env.VERCEL, 'NODE_ENV:', process.env.NODE_ENV);
+console.log('🔧 DEBUG config.uri:', (config.uri || 'UNSET').substring(0, 25) + '...');
+console.log('🔧 DEBUG config.user:', (config.user || 'UNSET').substring(0, 10) + '...');
+
 const driver = neo4j.driver(
     config.uri,
     neo4j.auth.basic(config.user, config.password)
