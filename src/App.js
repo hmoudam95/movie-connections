@@ -98,14 +98,6 @@ const getDynamicFontSize = (title) => {
 };
 
 
-const EmptyState = ({ icon, title, description }) => (
-  <div className="empty-state fade-in">
-    <div className="empty-state-icon">{icon}</div>
-    <div className="empty-state-text">{title}</div>
-    <div className="empty-state-description">{description}</div>
-  </div>
-);
-
 function App() {
   // Movie & game state
   const [startMovie, setStartMovie] = useState('');
@@ -128,8 +120,6 @@ function App() {
 
   // Error states for specific components
   const [randomError, setRandomError] = useState({ start: null, target: null });
-  const [actorError, setActorError] = useState(null);
-  const [hintError, setHintError] = useState(null);
 
   // ** State for hint display **
   const [hintChain, setHintChain] = useState(null);
@@ -374,8 +364,6 @@ function App() {
       setError(null);
       setHintChain(null);
       setRandomError({ start: null, target: null });
-      setActorError(null);
-      setHintError(null);
       setShowTargetCast(false);
       setTargetMovieCast([]);
       setTargetCastLoading(false);
