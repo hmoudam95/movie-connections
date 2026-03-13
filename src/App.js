@@ -1,15 +1,13 @@
-import React, { useState, useEffect, useCallback, useReducer } from 'react';
+import React, { useState, useEffect, useReducer } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { gameReducer, initialGameState } from './state/gameReducer';
 import { uiReducer, initialUIState } from './state/uiReducer';
 import { useMobile } from './hooks/useMobile';
 import { useMovieAPI } from './hooks/useMovieAPI';
+import { useHintSystem } from './hooks/useHintSystem';
 import './App.css';
 
 const POSTER_BASE_URL = 'https://image.tmdb.org/t/p/w300';
-
-// In dev, CRA proxy forwards /api to localhost:4000. In prod (Vercel), /api routes are serverless functions.
-const BACKEND_BASE = process.env.REACT_APP_API_BASE_URL || '';
 
 
 // Skeleton Components
@@ -107,10 +105,6 @@ function App() {
   const isMobile = useMobile();
   const { fetchMovieDetails, fetchActorFilmography, getRandomMovie } = useMovieAPI(gameDispatch, uiDispatch);
 
-  // Background hint fetch state (not serializable — stays as useState)
-  const [backgroundHintFetching, setBackgroundHintFetching] = useState(false);
-  const [backgroundFetchController, setBackgroundFetchController] = useState(null);
-
   // Destructure for convenience
   const {
     phase: gameState, startMovie, targetMovie, currentMovie,
@@ -121,6 +115,10 @@ function App() {
     loading: isLoading, randomLoading, actorLoading,
     hintLoading, targetCastLoading, error, randomError,
   } = ui;
+
+  const { fetchHint, cancelHintFetch } = useHintSystem(
+    gameState, currentMovie, targetMovie, cachedHintChain, gameDispatch, uiDispatch
+  );
 
   // Auto-randomize on mount
   useEffect(() => {
@@ -167,102 +165,12 @@ function App() {
   };
 
   const resetGame = () => {
-    if (backgroundFetchController) {
-      backgroundFetchController.abort();
-      setBackgroundFetchController(null);
-    }
+    cancelHintFetch();
     setTimeout(() => {
       gameDispatch({ type: 'RESET' });
       uiDispatch({ type: 'RESET_UI' });
-      setBackgroundHintFetching(false);
-      setBackgroundFetchController(null);
     }, 100);
   };
-
-  // ** Background hint fetching (silent, non-blocking) **
-  const fetchHintInBackground = useCallback(async () => {
-    if (!currentMovie?.id || !targetMovie?.id) return;
-    if (cachedHintChain || backgroundHintFetching) return;
-
-    const controller = new AbortController();
-    setBackgroundFetchController(controller);
-    setBackgroundHintFetching(true);
-
-    try {
-      const res = await fetch(
-        `${BACKEND_BASE}/api/path?fromMovieId=${currentMovie.id}&toMovieId=${targetMovie.id}`,
-        { signal: controller.signal }
-      );
-      if (controller.signal.aborted) return;
-      const data = await res.json();
-      if (!data.error && data.chain) {
-        gameDispatch({ type: 'CACHE_HINT', chain: data.chain });
-      }
-    } catch (err) {
-      if (!controller.signal.aborted) {
-        console.log('Background hint fetch failed (silent):', err.message);
-      }
-    } finally {
-      if (!controller.signal.aborted) {
-        setBackgroundHintFetching(false);
-        setBackgroundFetchController(null);
-      }
-    }
-  }, [currentMovie?.id, targetMovie?.id, cachedHintChain, backgroundHintFetching]);
-
-  // ** Fetch hint on button click **
-  const fetchHint = async () => {
-    if (!currentMovie?.id || !targetMovie?.id) return;
-
-    // If background fetch completed, show cached results instantly
-    if (cachedHintChain) {
-      gameDispatch({ type: 'SHOW_HINT' });
-      return;
-    }
-
-    // Otherwise do a direct fetch
-    uiDispatch({ type: 'SET_HINT_LOADING', value: true });
-    try {
-      const res = await fetch(
-        `${BACKEND_BASE}/api/path?fromMovieId=${currentMovie.id}&toMovieId=${targetMovie.id}`
-      );
-      const data = await res.json();
-      if (data.error) {
-        uiDispatch({ type: 'SET_ERROR', message: data.error });
-      } else {
-        gameDispatch({ type: 'SET_HINT', chain: data.chain });
-      }
-    } catch (err) {
-      console.error(err);
-      uiDispatch({ type: 'SET_ERROR', message: 'Failed to fetch hint' });
-    } finally {
-      uiDispatch({ type: 'SET_HINT_LOADING', value: false });
-    }
-  };
-
-  // ** Background hint fetching when game starts **
-  useEffect(() => {
-    if (gameState === 'playing' && currentMovie?.id && targetMovie?.id) {
-      // Smart delay: Give user time to look at the interface before fetching
-      const timer = setTimeout(() => {
-        fetchHintInBackground();
-      }, 2000); // 2 second delay for optimal UX
-
-      return () => clearTimeout(timer);
-    }
-  }, [gameState, currentMovie?.id, targetMovie?.id, fetchHintInBackground]);
-
-  // ** Cleanup on component unmount **
-  useEffect(() => {
-    return () => {
-      if (backgroundFetchController) {
-        backgroundFetchController.abort();
-      }
-    };
-  }, [backgroundFetchController]);
-
-  // ** Removed auto-fetch for better performance **
-  // Initial shortest path is now only fetched when user clicks "Give me a hint"
 
 
   // Setup screen JSX
