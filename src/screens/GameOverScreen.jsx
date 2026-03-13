@@ -1,4 +1,4 @@
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import ChainDisplay from '../components/ChainDisplay';
 import { DIFFICULTY_MOVES } from '../state/gameReducer';
