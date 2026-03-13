@@ -1,6 +1,13 @@
+export const DIFFICULTY_MOVES = { easy: 8, normal: 6, hard: 4 };
+
 export const initialGameState = {
   // Phase
-  phase: 'setup', // 'setup' | 'playing' | 'complete'
+  phase: 'setup', // 'setup' | 'playing' | 'complete' | 'failed'
+
+  // Difficulty & Moves
+  difficulty: 'normal',
+  movesRemaining: DIFFICULTY_MOVES.normal,
+  movesUsed: 0,
 
   // Movies
   startMovie: null,
@@ -17,13 +24,23 @@ export const initialGameState = {
   targetMovieCast: [],
   showTargetCast: false,
 
-  // Hint system
-  hintChain: null,        // displayed hint path
+  // Hint system (graduated)
   cachedHintChain: null,  // background-fetched hint (not yet shown)
+  hintLevel: 0,           // 0 = no hints used, 1/2/3 = hint tiers
+  hintsUsed: [],          // track which hints were revealed
 };
 
 export function gameReducer(state, action) {
   switch (action.type) {
+    case 'SET_DIFFICULTY': {
+      const difficulty = action.difficulty;
+      return {
+        ...state,
+        difficulty,
+        movesRemaining: DIFFICULTY_MOVES[difficulty],
+      };
+    }
+
     case 'SET_START_MOVIE': {
       const { movie, details } = action;
       const sortedCast = details.credits.cast
@@ -34,7 +51,7 @@ export function gameReducer(state, action) {
         startMovie: movie,
         currentMovie: details,
         cast: sortedCast,
-        chain: [{ movie, actor: null }],
+        chain: [{ movie: details, actor: null }],
       };
     }
 
@@ -47,7 +64,12 @@ export function gameReducer(state, action) {
     }
 
     case 'START_GAME': {
-      return { ...state, phase: 'playing' };
+      return {
+        ...state,
+        phase: 'playing',
+        movesRemaining: DIFFICULTY_MOVES[state.difficulty],
+        movesUsed: 0,
+      };
     }
 
     case 'SELECT_ACTOR': {
@@ -67,6 +89,8 @@ export function gameReducer(state, action) {
       const sortedCast = details.credits.cast
         .slice()
         .sort((a, b) => a.order - b.order);
+      const newMovesUsed = state.movesUsed + 1;
+      const newMovesRemaining = state.movesRemaining - 1;
       return {
         ...state,
         chain: [...state.chain, { movie: details, actor }],
@@ -74,11 +98,35 @@ export function gameReducer(state, action) {
         cast: sortedCast,
         selectedActor: null,
         filmography: [],
+        movesUsed: newMovesUsed,
+        movesRemaining: newMovesRemaining,
       };
     }
 
     case 'COMPLETE_GAME': {
       return { ...state, phase: 'complete' };
+    }
+
+    case 'FAIL_GAME': {
+      return { ...state, phase: 'failed' };
+    }
+
+    case 'UNDO_MOVE': {
+      if (state.chain.length <= 1) return state;
+      const newChain = state.chain.slice(0, -1);
+      const lastItem = newChain[newChain.length - 1];
+      return {
+        ...state,
+        chain: newChain,
+        currentMovie: lastItem.movie,
+        cast: lastItem.movie.credits?.cast
+          ? lastItem.movie.credits.cast.slice().sort((a, b) => a.order - b.order)
+          : state.cast,
+        selectedActor: null,
+        filmography: [],
+        movesUsed: state.movesUsed - 1,
+        movesRemaining: state.movesRemaining + 1,
+      };
     }
 
     case 'SET_TARGET_CAST': {
@@ -97,12 +145,15 @@ export function gameReducer(state, action) {
       return { ...state, cachedHintChain: action.chain };
     }
 
-    case 'SHOW_HINT': {
-      return { ...state, hintChain: state.cachedHintChain };
-    }
-
-    case 'SET_HINT': {
-      return { ...state, hintChain: action.chain };
+    case 'USE_HINT': {
+      const { level, content, moveCost } = action;
+      return {
+        ...state,
+        hintLevel: level,
+        hintsUsed: [...state.hintsUsed, { level, content }],
+        movesRemaining: state.movesRemaining - moveCost,
+        movesUsed: state.movesUsed + moveCost,
+      };
     }
 
     case 'RESET': {

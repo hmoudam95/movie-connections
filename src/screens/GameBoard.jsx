@@ -3,14 +3,17 @@ import ActorImage from '../components/ActorImage';
 import ActorCardSkeleton from '../components/ActorCardSkeleton';
 import ChainDisplay from '../components/ChainDisplay';
 import { POSTER_BASE_URL } from '../utils/constants';
+import { DIFFICULTY_MOVES } from '../state/gameReducer';
 
 export default function GameBoard({
   currentMovie, targetMovie, gameChain, selectedActor,
-  cast, filmography, hintChain, cachedHintChain,
+  cast, filmography, cachedHintChain,
+  hintLevel, hintsUsed, movesRemaining, movesUsed, difficulty,
   actorLoading, hintLoading,
-  gameDispatch, handleActorSelect, handleFilmographySelect, fetchHint,
+  gameDispatch, handleActorSelect, handleFilmographySelect, handleHint,
 }) {
   const [showAllCast, setShowAllCast] = useState(false);
+  const [filmographySearch, setFilmographySearch] = useState('');
 
   const creditedCast = useMemo(
     () => cast.filter(a => !a.character?.toLowerCase().includes('uncredited')),
@@ -18,6 +21,26 @@ export default function GameBoard({
   );
   const visibleCast = showAllCast ? creditedCast : creditedCast.slice(0, 15);
   const hiddenCount = creditedCast.length - 15;
+
+  // Filmography filtering
+  const filteredFilmography = useMemo(() => {
+    if (!filmographySearch.trim()) return filmography;
+    const query = filmographySearch.toLowerCase();
+    return filmography.filter(m => m.title?.toLowerCase().includes(query));
+  }, [filmography, filmographySearch]);
+
+  // Move indicator dots
+  const totalMoves = DIFFICULTY_MOVES[difficulty];
+  const moveDots = Array.from({ length: totalMoves }, (_, i) => i < movesUsed);
+
+  // Get the next available hint level
+  const nextHintLevel = hintLevel + 1;
+
+  // When actor changes, clear search
+  const onActorSelect = (actor) => {
+    setFilmographySearch('');
+    handleActorSelect(actor);
+  };
 
   return (
     <div className="game-board page-transition">
@@ -28,14 +51,11 @@ export default function GameBoard({
             <div className="current-section">
               <h4>Current:</h4>
               <div className="compact-movie-card">
-                <img
-                  src={
-                    currentMovie.poster_path
-                      ? POSTER_BASE_URL + currentMovie.poster_path
-                      : '/api/placeholder/80/120'
-                  }
-                  alt={currentMovie.title}
-                />
+                {currentMovie.poster_path ? (
+                  <img src={POSTER_BASE_URL + currentMovie.poster_path} alt={currentMovie.title} />
+                ) : (
+                  <div className="movie-placeholder">🎬</div>
+                )}
                 <div className="movie-title">{currentMovie.title}</div>
               </div>
             </div>
@@ -43,8 +63,8 @@ export default function GameBoard({
             <div className="vs-divider">
               <span className="vs-icon">→</span>
               <div className="steps-counter">
-                <span className="steps-number">{gameChain.length - 1}</span>
-                <span className="steps-label">steps</span>
+                <span className="steps-number">{movesRemaining}</span>
+                <span className="steps-label">left</span>
               </div>
             </div>
 
@@ -55,17 +75,35 @@ export default function GameBoard({
                 onClick={() => gameDispatch({ type: 'TOGGLE_TARGET_CAST' })}
                 style={{ cursor: 'pointer' }}
               >
-                <img
-                  src={
-                    targetMovie.poster_path
-                      ? POSTER_BASE_URL + targetMovie.poster_path
-                      : '/api/placeholder/80/120'
-                  }
-                  alt={targetMovie.title}
-                />
+                {targetMovie.poster_path ? (
+                  <img src={POSTER_BASE_URL + targetMovie.poster_path} alt={targetMovie.title} />
+                ) : (
+                  <div className="movie-placeholder">🎬</div>
+                )}
                 <div className="movie-title">{targetMovie.title}</div>
               </div>
             </div>
+          </div>
+
+          {/* Move indicator dots + undo */}
+          <div className="moves-bar">
+            <div className="move-dots">
+              {moveDots.map((used, i) => (
+                <span
+                  key={i}
+                  className={`move-dot ${used ? 'move-dot-used' : ''}`}
+                />
+              ))}
+            </div>
+            {gameChain.length > 1 && (
+              <button
+                className="undo-button"
+                onClick={() => gameDispatch({ type: 'UNDO_MOVE' })}
+                title="Undo last move"
+              >
+                ↩ Undo
+              </button>
+            )}
           </div>
         </div>
       </div>
@@ -80,30 +118,48 @@ export default function GameBoard({
         </div>
       )}
 
-      {/* Hint button & display */}
+      {/* Graduated hint system */}
       <div className="hint-section animate-in animate-in-delay-3">
-        <button
-          onClick={fetchHint}
-          className={`hint-button ${hintLoading ? 'button-loading' : ''} ${cachedHintChain ? 'hint-ready' : ''}`}
-          disabled={hintLoading}
-        >
-          {cachedHintChain ? '⚡ Show Shortest Path (Ready)' : '💡 Show Shortest Path'}
-        </button>
+        {/* Show revealed hints */}
+        {hintsUsed.length > 0 && (
+          <div className="hints-revealed">
+            {hintsUsed.map((hint, i) => (
+              <div key={i} className="hint-item fade-in">
+                <span className="hint-icon">
+                  {hint.level === 1 ? '💡' : hint.level === 2 ? '🔍' : '🎬'}
+                </span>
+                <span>{hint.content}</span>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Next hint button */}
+        {nextHintLevel <= 3 && (
+          <button
+            onClick={() => {
+              if (nextHintLevel === 1) {
+                handleHint(1);
+              } else {
+                const cost = nextHintLevel === 2 ? 1 : 2;
+                if (window.confirm(`This hint costs ${cost} move${cost > 1 ? 's' : ''}. Continue?`)) {
+                  handleHint(nextHintLevel);
+                }
+              }
+            }}
+            className={`hint-button ${cachedHintChain ? 'hint-ready' : ''}`}
+            disabled={hintLoading}
+          >
+            {nextHintLevel === 1 && '💡 Get Hint (free)'}
+            {nextHintLevel === 2 && '🔍 Next Hint (-1 move)'}
+            {nextHintLevel === 3 && '🎬 Big Hint (-2 moves)'}
+          </button>
+        )}
+
         {hintLoading && (
           <div className="loading-content">
             <div className="loading-spinner"></div>
-            <div className="loading-text">Finding optimal path...</div>
-          </div>
-        )}
-        {!hintLoading && hintChain && (
-          <div className="hint fade-in">
-            <strong>Shortest path:</strong>{' '}
-            {hintChain.map((node, i) => (
-              <span key={node.id}>
-                {node.title}
-                {i < hintChain.length - 1 ? ' → ' : ''}
-              </span>
-            ))}
+            <div className="loading-text">Loading hint data...</div>
           </div>
         )}
       </div>
@@ -112,29 +168,53 @@ export default function GameBoard({
       {selectedActor ? (
         <div className="filmography-section animate-in animate-in-delay-4">
           <h2>Movies with {selectedActor.name}</h2>
-          <button className="button-ghost" onClick={() => gameDispatch({ type: 'DESELECT_ACTOR' })}>← Back to Cast</button>
+          <button className="button-ghost" onClick={() => {
+            setFilmographySearch('');
+            gameDispatch({ type: 'DESELECT_ACTOR' });
+          }}>← Back to Cast</button>
+
+          {/* CHANGE 2: Filmography search box */}
+          {!actorLoading && filmography.length > 0 && (
+            <div className="filmography-search-wrapper">
+              <input
+                type="text"
+                className="filmography-search"
+                placeholder="Search movies..."
+                value={filmographySearch}
+                onChange={(e) => setFilmographySearch(e.target.value)}
+                autoComplete="off"
+              />
+              <span className="filmography-search-count">
+                {filmographySearch
+                  ? `${filteredFilmography.length} of ${filmography.length} movies`
+                  : `${filmography.length} movies`}
+              </span>
+            </div>
+          )}
+
           {actorLoading ? (
             <div className="skeleton-grid">
               {[...Array(8)].map((_, i) => (
                 <ActorCardSkeleton key={i} />
               ))}
             </div>
+          ) : filteredFilmography.length === 0 && filmographySearch ? (
+            <div className="filmography-empty">
+              <p>No movies found for "{filmographySearch}"</p>
+            </div>
           ) : (
             <div className="filmography-list stagger-grid">
-              {filmography.map(m => (
+              {filteredFilmography.map(m => (
                 <div
                   key={m.id}
                   className="filmography-item"
                   onClick={() => handleFilmographySelect(m)}
                 >
-                  <img
-                    src={
-                      m.poster_path
-                        ? POSTER_BASE_URL + m.poster_path
-                        : '/api/placeholder/100/150'
-                    }
-                    alt={m.title}
-                  />
+                  {m.poster_path ? (
+                    <img src={POSTER_BASE_URL + m.poster_path} alt={m.title} />
+                  ) : (
+                    <div className="movie-placeholder">🎬</div>
+                  )}
                   <div className="movie-info">
                     <h3>{m.title}</h3>
                     <p>({m.release_date?.slice(0, 4) || 'N/A'})</p>
@@ -152,7 +232,7 @@ export default function GameBoard({
               <div
                 key={a.id}
                 className="cast-item"
-                onClick={() => handleActorSelect(a)}
+                onClick={() => onActorSelect(a)}
               >
                 <ActorImage actor={a} />
                 <p>{a.name}</p>

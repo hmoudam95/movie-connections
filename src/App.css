@@ -28,6 +28,279 @@
   margin-top: 0.5rem;
   text-align: center;
 }
+
+/* ===== MOVE INDICATOR BAR ===== */
+.moves-bar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-md);
+  margin-top: var(--space-sm);
+  padding-top: var(--space-sm);
+  border-top: 1px solid var(--border);
+}
+
+.move-dots {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.move-dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 3px;
+  background: rgba(16, 185, 129, 0.3);
+  border: 1px solid rgba(16, 185, 129, 0.5);
+  transition: all 0.3s ease;
+}
+
+.move-dot-used {
+  background: rgba(239, 68, 68, 0.7);
+  border-color: rgba(239, 68, 68, 0.8);
+}
+
+.move-dot-saved {
+  background: rgba(16, 185, 129, 0.6);
+  border-color: rgba(16, 185, 129, 0.8);
+}
+
+/* ===== UNDO BUTTON ===== */
+.undo-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 12px;
+  min-height: 44px;
+  min-width: 44px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  background: var(--surface-hover);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.undo-button:hover {
+  color: var(--text-primary);
+  background: var(--surface);
+  border-color: var(--border-hover);
+}
+
+.undo-button:active {
+  transform: scale(0.95);
+}
+
+/* ===== DIFFICULTY SELECTOR ===== */
+.difficulty-selector {
+  display: flex;
+  gap: var(--space-sm);
+  justify-content: center;
+  margin: var(--space-lg) 0;
+}
+
+.difficulty-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: var(--space-sm) var(--space-md);
+  min-width: 80px;
+  background: var(--surface);
+  border: 2px solid var(--border);
+  border-radius: var(--radius-lg);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  touch-action: manipulation;
+}
+
+.difficulty-btn:hover {
+  border-color: var(--border-hover);
+  background: var(--surface-hover);
+}
+
+.difficulty-active {
+  border-color: var(--accent-primary);
+  background: rgba(99, 102, 241, 0.1);
+}
+
+.difficulty-label {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.difficulty-moves {
+  font-size: 0.7rem;
+  color: var(--text-secondary);
+}
+
+/* ===== FILMOGRAPHY SEARCH ===== */
+.filmography-search-wrapper {
+  margin: var(--space-md) 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+.filmography-search {
+  width: 100%;
+  min-height: 44px;
+  padding: var(--space-sm) var(--space-md);
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  color: var(--text-primary);
+  font-size: 1rem;
+  font-family: inherit;
+  outline: none;
+  transition: border-color 0.2s ease;
+}
+
+.filmography-search:focus {
+  border-color: var(--accent-primary);
+  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2);
+}
+
+.filmography-search::placeholder {
+  color: var(--text-secondary);
+}
+
+.filmography-search-count {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  text-align: right;
+  padding-right: var(--space-xs);
+}
+
+.filmography-empty {
+  text-align: center;
+  padding: var(--space-xl);
+  color: var(--text-secondary);
+}
+
+.filmography-empty p {
+  font-size: 0.9rem;
+}
+
+/* ===== GRADUATED HINTS ===== */
+.hints-revealed {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  margin-bottom: var(--space-md);
+}
+
+.hint-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-sm) var(--space-md);
+  font-size: 0.875rem;
+  color: var(--text-primary);
+}
+
+.hint-icon {
+  font-size: 1.1rem;
+  flex-shrink: 0;
+}
+
+/* ===== GAME OVER SCREEN ===== */
+.game-over-screen::before {
+  background:
+    radial-gradient(circle at 25% 25%, rgba(239, 68, 68, 0.15) 0%, transparent 50%),
+    radial-gradient(circle at 75% 75%, rgba(239, 68, 68, 0.1) 0%, transparent 50%);
+}
+
+.game-over-header {
+  margin-bottom: var(--space-2xl);
+  position: relative;
+}
+
+.game-over-screen h1 {
+  font-size: clamp(2.5rem, 8vw, 4rem);
+  font-weight: 800;
+  background: linear-gradient(135deg, #ef4444, #f97316);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin-bottom: var(--space-md);
+}
+
+.game-over-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-sm);
+  background: linear-gradient(135deg, #ef4444, #dc2626);
+  color: white;
+  padding: var(--space-sm) var(--space-lg);
+  border-radius: var(--radius-xl);
+  font-weight: 600;
+  font-size: 0.875rem;
+}
+
+/* ===== OPTIMAL PATH REVEAL ===== */
+.optimal-path-reveal {
+  background: var(--surface);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  border-radius: var(--radius-2xl);
+  padding: var(--space-xl);
+  margin-bottom: var(--space-2xl);
+  width: 100%;
+  max-width: 500px;
+}
+
+.optimal-path-reveal h3 {
+  color: var(--accent-success);
+  margin-bottom: var(--space-md);
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+
+.optimal-chain {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.875rem;
+  line-height: 1.8;
+}
+
+.optimal-movie {
+  color: var(--accent-primary);
+  font-weight: 600;
+}
+
+.optimal-actor {
+  color: var(--accent-success);
+  font-weight: 500;
+}
+
+.optimal-arrow {
+  color: var(--text-secondary);
+}
+
+/* ===== RESULT MOVE DOTS ===== */
+.result-move-dots {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+  margin-top: var(--space-md);
+}
+
+.hints-used-note {
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+  margin-top: var(--space-sm);
+  text-align: center;
+}
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
 
 * {
@@ -1805,6 +2078,31 @@ input[type="text"]::placeholder {
   width: 60%;
   height: 14px;
   margin: 0 auto;
+}
+
+/* Movie Poster Placeholders */
+.movie-placeholder {
+  background: linear-gradient(135deg, var(--bg-tertiary), var(--surface-hover));
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  width: 100%;
+  aspect-ratio: 2/3;
+}
+
+.movie-placeholder.small {
+  width: 40px;
+  height: 60px;
+  font-size: 1rem;
+}
+
+.movie-placeholder.large {
+  width: 120px;
+  height: 180px;
+  font-size: 2rem;
 }
 
 /* Actor Image Placeholders */

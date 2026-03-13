@@ -37,34 +37,6 @@ export function useHintSystem(gameState, currentMovie, targetMovie, cachedHintCh
     }
   }, [currentMovie?.id, targetMovie?.id, cachedHintChain, backgroundHintFetching, gameDispatch]);
 
-  // Fetch hint on button click
-  const fetchHint = async () => {
-    if (!currentMovie?.id || !targetMovie?.id) return;
-
-    if (cachedHintChain) {
-      gameDispatch({ type: 'SHOW_HINT' });
-      return;
-    }
-
-    uiDispatch({ type: 'SET_HINT_LOADING', value: true });
-    try {
-      const res = await fetch(
-        `${BACKEND_BASE}/api/path?fromMovieId=${currentMovie.id}&toMovieId=${targetMovie.id}`
-      );
-      const data = await res.json();
-      if (data.error) {
-        uiDispatch({ type: 'SET_ERROR', message: data.error });
-      } else {
-        gameDispatch({ type: 'SET_HINT', chain: data.chain });
-      }
-    } catch (err) {
-      console.error(err);
-      uiDispatch({ type: 'SET_ERROR', message: 'Failed to fetch hint' });
-    } finally {
-      uiDispatch({ type: 'SET_HINT_LOADING', value: false });
-    }
-  };
-
   // Start background fetch 2s after game begins
   useEffect(() => {
     if (gameState === 'playing' && currentMovie?.id && targetMovie?.id) {
@@ -93,5 +65,5 @@ export function useHintSystem(gameState, currentMovie, targetMovie, cachedHintCh
     setBackgroundHintFetching(false);
   };
 
-  return { fetchHint, cancelHintFetch };
+  return { fetchHintInBackground, cancelHintFetch };
 }

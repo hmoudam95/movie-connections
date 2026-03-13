@@ -8,6 +8,7 @@ import { useHintSystem } from './hooks/useHintSystem';
 import SetupScreen from './screens/SetupScreen';
 import GameBoard from './screens/GameBoard';
 import VictoryScreen from './screens/VictoryScreen';
+import GameOverScreen from './screens/GameOverScreen';
 import CastOverlay from './components/CastOverlay';
 import './App.css';
 
@@ -21,14 +22,15 @@ function App() {
   const {
     phase: gameState, startMovie, targetMovie, currentMovie,
     selectedActor, chain: gameChain, cast, filmography,
-    targetMovieCast, showTargetCast, hintChain, cachedHintChain,
+    targetMovieCast, showTargetCast, cachedHintChain,
+    movesRemaining, movesUsed, hintLevel, hintsUsed, difficulty,
   } = game;
   const {
     loading: isLoading, randomLoading, actorLoading,
     hintLoading, targetCastLoading, error, randomError,
   } = ui;
 
-  const { fetchHint, cancelHintFetch } = useHintSystem(
+  const { fetchHintInBackground, cancelHintFetch } = useHintSystem(
     gameState, currentMovie, targetMovie, cachedHintChain, gameDispatch, uiDispatch
   );
 
@@ -49,6 +51,7 @@ function App() {
       return;
     }
 
+    // Check if this would use the last move (and it's not the target)
     uiDispatch({ type: 'SET_LOADING', value: true });
     try {
       const details = await fetchMovieDetails(movieSummary.id);
@@ -56,12 +59,65 @@ function App() {
 
       if (details.id === targetMovie.id) {
         setTimeout(() => gameDispatch({ type: 'COMPLETE_GAME' }), 300);
+      } else if (movesRemaining - 1 <= 0) {
+        // Used last move and didn't reach target
+        setTimeout(() => gameDispatch({ type: 'FAIL_GAME' }), 300);
       }
     } catch (err) {
       console.error(err);
       uiDispatch({ type: 'SET_ERROR', message: 'Failed to load movie details' });
     } finally {
       uiDispatch({ type: 'SET_LOADING', value: false });
+    }
+  };
+
+  // Graduated hint handler
+  const handleHint = (level) => {
+    if (!cachedHintChain) {
+      // Hint not ready yet — trigger background fetch
+      fetchHintInBackground();
+      uiDispatch({ type: 'SET_ERROR', message: 'Hint is loading... try again in a moment.' });
+      return;
+    }
+
+    const optimalSteps = Math.floor((cachedHintChain.length - 1) / 2); // movies only
+
+    if (level === 1) {
+      // Free hint: show path length
+      gameDispatch({
+        type: 'USE_HINT',
+        level: 1,
+        content: `The shortest path is ${optimalSteps} step${optimalSteps !== 1 ? 's' : ''}`,
+        moveCost: 0,
+      });
+    } else if (level === 2) {
+      // Costs 1 move: show first actor in optimal path
+      if (movesRemaining < 1) {
+        uiDispatch({ type: 'SET_ERROR', message: 'Not enough moves for this hint!' });
+        return;
+      }
+      const firstActor = cachedHintChain.find(n => n.type === 'Actor');
+      gameDispatch({
+        type: 'USE_HINT',
+        level: 2,
+        content: firstActor ? `Try looking for ${firstActor.title}` : 'No actor hint available',
+        moveCost: 1,
+      });
+    } else if (level === 3) {
+      // Costs 2 moves: show next movie in optimal path
+      if (movesRemaining < 2) {
+        uiDispatch({ type: 'SET_ERROR', message: 'Not enough moves for this hint!' });
+        return;
+      }
+      // Find the second movie in the optimal path (first is the start movie)
+      const movies = cachedHintChain.filter(n => n.type === 'Movie');
+      const nextMovie = movies.length > 1 ? movies[1] : null;
+      gameDispatch({
+        type: 'USE_HINT',
+        level: 3,
+        content: nextMovie ? `The path goes through "${nextMovie.title}"` : 'No movie hint available',
+        moveCost: 2,
+      });
     }
   };
 
@@ -84,11 +140,10 @@ function App() {
   // Swipe gesture handlers
   const handleSwipeLeft = () => {
     if (gameState === 'setup') startGame();
-    else if (gameState === 'playing' && !hintChain) fetchHint();
   };
 
   const handleSwipeRight = () => {
-    if (gameState === 'playing' || gameState === 'complete') resetGame();
+    if (gameState === 'playing' || gameState === 'complete' || gameState === 'failed') resetGame();
   };
 
   return (
@@ -132,6 +187,8 @@ function App() {
               randomError={randomError}
               getRandomMovie={getRandomMovie}
               startGame={startGame}
+              difficulty={difficulty}
+              gameDispatch={gameDispatch}
             />
           )}
           {gameState === 'playing' && (
@@ -142,21 +199,37 @@ function App() {
               selectedActor={selectedActor}
               cast={cast}
               filmography={filmography}
-              hintChain={hintChain}
               cachedHintChain={cachedHintChain}
+              hintLevel={hintLevel}
+              hintsUsed={hintsUsed}
+              movesRemaining={movesRemaining}
+              movesUsed={movesUsed}
+              difficulty={difficulty}
               actorLoading={actorLoading}
               hintLoading={hintLoading}
               gameDispatch={gameDispatch}
               handleActorSelect={handleActorSelect}
               handleFilmographySelect={handleFilmographySelect}
-              fetchHint={fetchHint}
+              handleHint={handleHint}
             />
           )}
           {gameState === 'complete' && (
             <VictoryScreen
               gameChain={gameChain}
+              movesUsed={movesUsed}
+              difficulty={difficulty}
+              hintsUsed={hintsUsed}
               resetGame={resetGame}
               uiDispatch={uiDispatch}
+            />
+          )}
+          {gameState === 'failed' && (
+            <GameOverScreen
+              gameChain={gameChain}
+              cachedHintChain={cachedHintChain}
+              movesUsed={movesUsed}
+              difficulty={difficulty}
+              resetGame={resetGame}
             />
           )}
         </>

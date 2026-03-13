@@ -6,14 +6,11 @@ export default function ChainDisplay({ chain }) {
   if (chain.length <= 1) {
     return (
       <div className="chain-compact">
-        <img
-          src={
-            chain[0]?.movie.poster_path
-              ? POSTER_BASE_URL + chain[0].movie.poster_path
-              : '/api/placeholder/40/60'
-          }
-          alt={chain[0]?.movie.title}
-        />
+        {chain[0]?.movie.poster_path ? (
+          <img src={POSTER_BASE_URL + chain[0].movie.poster_path} alt={chain[0]?.movie.title} />
+        ) : (
+          <div className="movie-placeholder small">🎬</div>
+        )}
         <span>{chain[0]?.movie.title}</span>
       </div>
     );
@@ -24,14 +21,11 @@ export default function ChainDisplay({ chain }) {
       {chain.map((item, idx) => (
         <div key={idx} className="chain-item">
           <div className="chain-movie">
-            <img
-              src={
-                item.movie.poster_path
-                  ? POSTER_BASE_URL + item.movie.poster_path
-                  : '/api/placeholder/100/150'
-              }
-              alt={item.movie.title}
-            />
+            {item.movie.poster_path ? (
+              <img src={POSTER_BASE_URL + item.movie.poster_path} alt={item.movie.title} />
+            ) : (
+              <div className="movie-placeholder">🎬</div>
+            )}
             <p>{item.movie.title}</p>
           </div>
           {item.actor && (
