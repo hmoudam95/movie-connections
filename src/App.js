@@ -6,8 +6,8 @@ const API_KEY = process.env.REACT_APP_TMDB_API_KEY;
 const API_BASE_URL = 'https://api.themoviedb.org/3';
 const POSTER_BASE_URL = 'https://image.tmdb.org/t/p/w300';
 
-// If REACT_APP_API_BASE_URL isn’t set (in dev), we'll hit the CRA proxy
-// const API_BASE = process.env.REACT_APP_API_BASE_URL || '';
+// In dev, CRA proxy forwards /api to localhost:4000. In prod (Vercel), /api routes are serverless functions.
+const BACKEND_BASE = process.env.REACT_APP_API_BASE_URL || '';
 
 
 // Skeleton Components
@@ -304,7 +304,7 @@ function App() {
   };
 
   const handleFilmographySelect = async (movieSummary) => {
-    // movieSummary is just the flat object from the actor’s credit list,
+    // movieSummary is just the flat object from the actor's credit list,
     // so we need to pull in its credits before we can use it.
     if (gameChain.some(item => item.movie.id === movieSummary.id)) {
       setError('This movie is already in your chain!');
@@ -400,7 +400,7 @@ function App() {
     
     try {
       const res = await fetch(
-        `http://localhost:4000/api/path?fromMovieId=${currentMovie.id}&toMovieId=${targetMovie.id}`,
+        `${BACKEND_BASE}/api/path?fromMovieId=${currentMovie.id}&toMovieId=${targetMovie.id}`,
         { signal: controller.signal }
       );
       
@@ -471,7 +471,7 @@ function App() {
     setHintLoading(true);
     try {
       const res = await fetch(
-        `http://localhost:4000/api/path?fromMovieId=${currentMovie.id}&toMovieId=${targetMovie.id}`
+        `${BACKEND_BASE}/api/path?fromMovieId=${currentMovie.id}&toMovieId=${targetMovie.id}`
       );
       const data = await res.json();
       if (data.error) setError(data.error);

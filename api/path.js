@@ -108,6 +108,9 @@ export default async function handler(req, res) {
     if (!fromMovieId || !toMovieId) {
         return res.status(400).json({ error: 'fromMovieId & toMovieId required.' });
     }
+    if (!/^\d{1,8}$/.test(fromMovieId) || !/^\d{1,8}$/.test(toMovieId)) {
+        return res.status(400).json({ error: 'Invalid movie ID format.' });
+    }
 
     console.log(`🔍 Environment: ${isVercel ? 'Production (Vercel)' : 'Development (Local)'}`);
     console.log(`🔍 Neo4j URI: ${config.uri}`);
@@ -132,7 +135,7 @@ export default async function handler(req, res) {
         const result = await readSession.run(
             `
     MATCH (start:Movie {id:$from}), (end:Movie {id:$to})
-    MATCH p = shortestPath((start)-[:ACTED_IN*]-(end))
+    MATCH p = shortestPath((start)-[:ACTED_IN*1..8]-(end))
     RETURN [n IN nodes(p) | {
       id:    n.id,
       title: coalesce(n.title, n.name),

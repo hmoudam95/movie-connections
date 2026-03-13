@@ -6,87 +6,60 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ### Frontend (React)
 ```bash
-npm start          # Start React development server (localhost:3000)
+npm install        # Install frontend dependencies
+npm start          # Start React dev server (localhost:3000), proxies /api to localhost:4000
 npm run build      # Build for production
-npm test           # Run React tests
+npm test           # Run React tests (Jest + React Testing Library, interactive watch mode)
+npm test -- --watchAll=false   # Run tests once (CI mode)
 ```
 
 ### Backend (Local Development)
 ```bash
-cd server && npm start    # Start Express server (localhost:4000)
+cd server && npm install   # Install backend dependencies (separate package.json)
+cd server && npm start     # Start Express server (localhost:4000)
 ```
+
+Both the frontend and backend must run simultaneously for local development. The frontend's `proxy` field in `package.json` forwards `/api` requests to `localhost:4000`.
 
 ### Database Operations
 ```bash
 node populateDatabase.js           # Populate local Neo4j with TMDB movie data
+node populateAuraDatabase.js       # Populate Neo4j AuraDB cloud instance
 node scripts/migrateToCloud.js     # Migrate data from local to cloud Neo4j
 ```
 
 ## Architecture Overview
 
-### Hybrid Backend Architecture
-The project uses a **dual backend approach**:
-- **Local Development**: Express.js server (`server/index.js`) running on port 4000
-- **Production**: Vercel API Routes (`api/path.js`) for serverless deployment
+### Dual Backend
+- **Local**: Express.js server (`server/index.js`) on port 4000
+- **Production**: Vercel serverless function (`api/path.js`)
 
-Both backends share identical core logic for Neo4j operations and TMDB API integration.
+Both implement the same logic: upsert movies/actors from TMDB into Neo4j, then run `shortestPath` queries. The Vercel route detects its environment via `process.env.VERCEL` and switches Neo4j credentials accordingly.
 
-### Key Components
+### Single API Endpoint
+`GET /api/path?fromMovieId={id}&toMovieId={id}` — Returns the shortest actor-movie chain between two movies. Auto-upserts both movies and their full cast into Neo4j before querying.
 
-**Frontend (`src/App.js`)**:
-- Single-page React application with three game states: setup, playing, complete
-- Integrates TMDB API for movie search and details
-- Manages game state and movie-actor chains
-- Calls backend `/api/path` endpoint for shortest path calculations
+### Frontend (`src/App.js`)
+Single-file React app (no router). All game logic lives in one component with three states: `setup`, `playing`, `complete`. Uses TMDB API directly for movie search, cast browsing, and actor filmographies. The TMDB API key is provided via `REACT_APP_TMDB_API_KEY` env var.
 
-**Backend Endpoints**:
-- `GET /api/path?fromMovieId={id}&toMovieId={id}` - Returns shortest path between movies
-- Auto-upserts movies and actors to Neo4j if they don't exist
-- Uses Neo4j's shortestPath algorithm for optimal solutions
+Background hint fetching starts 2 seconds after gameplay begins, caching the shortest path result so the hint button responds instantly when clicked.
 
-**Database Schema (Neo4j)**:
+### Database Schema (Neo4j)
 - `Movie` nodes: `{id, title, poster_path, release_date}`
 - `Actor` nodes: `{id, name, profile_path}`
 - `ACTED_IN` relationships: `(Actor)-[:ACTED_IN]->(Movie)`
 
-### Environment Configuration
+### Environment Variables
+Local dev uses a `.env` file in the project root. Required vars:
+- `TMDB_API_KEY` — for backend TMDB calls
+- `REACT_APP_TMDB_API_KEY` — for frontend TMDB calls (must have `REACT_APP_` prefix for CRA)
+- `NEO4J_URI`, `NEO4J_USER`, `NEO4J_PASSWORD` — Neo4j connection
+- `PORT` — backend port (default 4000)
 
-**Development**: Uses local Neo4j instance
-**Production**: Uses Neo4j AuraDB cloud instance
+Production uses Vercel environment variables with the same names (minus `REACT_APP_` prefix handled by Vercel config).
 
-Environment variables are handled differently:
-- Local development: `.env` file
-- Production: Vercel environment variables
-
-### UI/Animation Stack
-- **Framer Motion**: 3D hover effects and animations
-- **Tailwind CSS**: Utility-first styling with custom components
-- **Component Library**: Located in `src/components/ui/` with reusable MovieCard, Button, Modal, etc.
-
-## Database Population
-
-The `populateDatabase.js` script fetches popular movies from TMDB and populates the local Neo4j database. It:
-1. Fetches 50 pages of popular movies (1000+ vote count)
-2. For each movie, fetches detailed credits
-3. Creates Movie nodes and Actor nodes with ACTED_IN relationships
-
-## Deployment Architecture
-
-**Vercel Configuration** (`vercel.json`):
-- Static build for React frontend
-- Serverless functions for API routes
-- Environment variable mapping for Neo4j credentials
-
-**API Route Logic**:
-- Detects environment (local vs Vercel) using `process.env.VERCEL`
-- Switches between local and cloud Neo4j configurations automatically
-- Handles CORS for cross-origin requests
-
-## Game Logic Flow
-
-1. **Setup**: User selects/randomizes start and target movies
-2. **Playing**: User navigates through actors to build movie chain
-3. **Path Finding**: Backend calculates shortest path using Neo4j graph algorithms
-4. **Completion**: Game ends when user reaches target movie
-
-The shortest path algorithm runs automatically when the game starts and provides hints on demand.
+### UI Stack
+- **Framer Motion** + **@react-spring/web** + **@use-gesture/react**: Animations, 3D hover effects, swipe gestures
+- **Tailwind CSS**: Styling with custom theme in `tailwind.config.js` (custom color palettes, gradients, animations)
+- **Custom CSS**: `src/App.css` for game-specific styles, `src/styles/animations.css` for animation utilities
+- **Component library**: `src/components/ui/` — reusable MovieCard, Button, Modal, Toast, Card components (exported via barrel `index.js`)
