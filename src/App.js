@@ -1,5 +1,5 @@
 import React, { useEffect, useReducer } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { gameReducer, initialGameState } from './state/gameReducer';
 import { uiReducer, initialUIState } from './state/uiReducer';
 import { useMobile } from './hooks/useMobile';
@@ -178,61 +178,93 @@ function App() {
           <p>Loading your movie connection...</p>
         </div>
       ) : (
-        <>
+        <AnimatePresence mode="wait">
           {gameState === 'setup' && (
-            <SetupScreen
-              startMovie={startMovie}
-              targetMovie={targetMovie}
-              randomLoading={randomLoading}
-              randomError={randomError}
-              getRandomMovie={getRandomMovie}
-              startGame={startGame}
-              difficulty={difficulty}
-              gameDispatch={gameDispatch}
-            />
+            <motion.div
+              key="setup"
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 30 }}
+              transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+            >
+              <SetupScreen
+                startMovie={startMovie}
+                targetMovie={targetMovie}
+                randomLoading={randomLoading}
+                randomError={randomError}
+                getRandomMovie={getRandomMovie}
+                startGame={startGame}
+                difficulty={difficulty}
+                gameDispatch={gameDispatch}
+              />
+            </motion.div>
           )}
           {gameState === 'playing' && (
-            <GameBoard
-              currentMovie={currentMovie}
-              targetMovie={targetMovie}
-              gameChain={gameChain}
-              selectedActor={selectedActor}
-              cast={cast}
-              filmography={filmography}
-              cachedHintChain={cachedHintChain}
-              hintLevel={hintLevel}
-              hintsUsed={hintsUsed}
-              movesRemaining={movesRemaining}
-              movesUsed={movesUsed}
-              difficulty={difficulty}
-              actorLoading={actorLoading}
-              hintLoading={hintLoading}
-              gameDispatch={gameDispatch}
-              handleActorSelect={handleActorSelect}
-              handleFilmographySelect={handleFilmographySelect}
-              handleHint={handleHint}
-            />
+            <motion.div
+              key="playing"
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, filter: 'blur(4px)' }}
+              transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+            >
+              <GameBoard
+                currentMovie={currentMovie}
+                targetMovie={targetMovie}
+                gameChain={gameChain}
+                selectedActor={selectedActor}
+                cast={cast}
+                filmography={filmography}
+                cachedHintChain={cachedHintChain}
+                hintLevel={hintLevel}
+                hintsUsed={hintsUsed}
+                movesRemaining={movesRemaining}
+                movesUsed={movesUsed}
+                difficulty={difficulty}
+                actorLoading={actorLoading}
+                hintLoading={hintLoading}
+                gameDispatch={gameDispatch}
+                handleActorSelect={handleActorSelect}
+                handleFilmographySelect={handleFilmographySelect}
+                handleHint={handleHint}
+              />
+            </motion.div>
           )}
           {gameState === 'complete' && (
-            <VictoryScreen
-              gameChain={gameChain}
-              movesUsed={movesUsed}
-              difficulty={difficulty}
-              hintsUsed={hintsUsed}
-              resetGame={resetGame}
-              uiDispatch={uiDispatch}
-            />
+            <motion.div
+              key="complete"
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, y: 30 }}
+              transition={{ type: 'spring', stiffness: 200, damping: 25 }}
+            >
+              <VictoryScreen
+                gameChain={gameChain}
+                movesUsed={movesUsed}
+                difficulty={difficulty}
+                hintsUsed={hintsUsed}
+                resetGame={resetGame}
+                uiDispatch={uiDispatch}
+              />
+            </motion.div>
           )}
           {gameState === 'failed' && (
-            <GameOverScreen
-              gameChain={gameChain}
-              cachedHintChain={cachedHintChain}
-              movesUsed={movesUsed}
-              difficulty={difficulty}
-              resetGame={resetGame}
-            />
+            <motion.div
+              key="failed"
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, y: 30 }}
+              transition={{ type: 'spring', stiffness: 200, damping: 25 }}
+            >
+              <GameOverScreen
+                gameChain={gameChain}
+                cachedHintChain={cachedHintChain}
+                movesUsed={movesUsed}
+                difficulty={difficulty}
+                resetGame={resetGame}
+              />
+            </motion.div>
           )}
-        </>
+        </AnimatePresence>
       )}
     </motion.div>
   );
