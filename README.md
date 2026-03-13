@@ -1,265 +1,162 @@
-# 🎬 Movie Connections Game
+# Movie Connections
 
-A sophisticated web-based game that challenges players to connect movies through shared actors using graph algorithms. Built with React 19, Neo4j AuraDB, and featuring a modern UI with skeleton loading states, error handling, and beautiful actor placeholders.
+Connect two movies through shared actors in the fewest steps possible. A graph-powered puzzle game that uses real movie data and shortest-path algorithms to generate solvable challenges.
 
-## 🎯 Game Rules
+**Live at [movie-connections.vercel.app](https://movie-connections.vercel.app)**
 
-1. **Random Movies**: Get two random popular movies to connect
-2. **Find Connections**: Navigate through actors and their filmographies  
-3. **Build Your Path**: Create the shortest chain between the movies
-4. **Get Hints**: Use Neo4j's shortest path algorithm for optimal solutions
-5. **Achieve Victory**: Complete the connection and see your performance stats!
+## How to Play
 
-## ✨ Features
+1. Two random movies are selected — a **start** and a **target**
+2. You see the cast of your current movie
+3. Pick an actor, then pick one of their other films — that film becomes your new current movie
+4. Repeat until you reach the target movie
+5. The game tracks your **steps** (movies visited) and **moves** (selections made)
 
-### 🎮 Core Gameplay
-- **Random Movie Selection**: Auto-generated popular movies from TMDB
-- **Smart Actor Navigation**: Browse complete filmographies with loading states
-- **Visual Chain Building**: Beautiful breadcrumb-style path visualization
-- **On-Demand Hints**: Get optimal solutions using Neo4j graph algorithms
-- **Achievement System**: Performance-based scoring with celebration animations
+### Difficulty
 
-### 🎨 Modern UI/UX
-- **Professional Design System**: CSS custom properties with modern styling
-- **Skeleton Loading States**: Smooth placeholders for all content
-- **Actor Image Placeholders**: Beautiful gradient tiles with initials for missing photos
-- **Error Handling**: Graceful error states with retry functionality
-- **Responsive Animations**: Staggered grid animations and smooth transitions
-- **Victory Celebrations**: Animated achievement system with social sharing
+| Mode   | Moves Allowed |
+|--------|---------------|
+| Easy   | 8             |
+| Normal | 6             |
+| Hard   | 4             |
 
-### 🗄️ Database & Backend
-- **Neo4j Graph Database**: 2036+ movies with actor relationships
-- **Shortest Path Algorithm**: Efficient graph traversal for optimal solutions
-- **Hybrid Architecture**: Local development + cloud production deployment
-- **Real-time Data**: Dynamic movie and actor data from TMDB API
+Run out of moves and the game reveals the optimal path you missed.
 
-## 🚀 Live Demo
+### Hints
 
-**Production**: [Your Vercel URL here]
-**Local Development**: [http://localhost:3000](http://localhost:3000)
+Three graduated tiers, each costing one move:
 
-## 🛠️ Technology Stack
+1. **Hint 1** — Number of steps in the shortest path
+2. **Hint 2** — Name of the connecting actor for the next step
+3. **Hint 3** — The exact next movie to pick
 
-### Frontend
-- **React 19.0.0** - Modern React with hooks and state management
-- **CSS Custom Properties** - Professional design system with variables
-- **Skeleton Components** - Loading placeholders for smooth UX
-- **Error Boundaries** - Graceful error handling and recovery
-- **Responsive Design** - Mobile-first approach with adaptive layouts
+Hints are fetched in the background so they respond instantly when requested.
 
-### Backend & Database
-- **Neo4j AuraDB** - Cloud graph database (production)
-- **Neo4j Local** - Local development database
-- **Express.js** - API server (local development)
-- **Vercel API Routes** - Serverless functions (production)
+### Undo
 
-### APIs & Services
-- **TMDB API** - Movie and actor data
-- **Vercel** - Frontend hosting and serverless backend
-- **GitHub** - Version control and CI/CD
+Take back your last move at no cost. Only available when you've made at least one step.
 
-## 📦 Installation & Setup
+## Features
+
+- **Step limit & move economy** — every action counts, hints trade moves for information
+- **Cinema Dark UI** — dark theme with gold accents, ticket-stub stats, confetti victory screen
+- **Horizontal chain rail** — animated path visualization with poster thumbnails and actor connector circles
+- **Filmography search** — filter an actor's films by title when browsing large filmographies
+- **Mobile-first** — tested on iPhone 14 (390x844) and Galaxy S23 (360x780), 44px touch targets
+- **Animated transitions** — page transitions via AnimatePresence, staggered cast grids, spring-based chain building, move dot pulse, hint reveal expand
+- **Accessibility** — `prefers-reduced-motion` disables all animations
+- **Neo4j shortest path** — graph database with 55,877 nodes and 79,048 relationships powers the hint system and game-over path reveal
+
+## Tech Stack
+
+| Layer      | Technology                                    |
+|------------|-----------------------------------------------|
+| Frontend   | React 19, Framer Motion, Tailwind CSS + custom CSS |
+| Backend    | Vercel serverless functions (production), Express.js (local dev) |
+| Database   | Neo4j AuraDB (cloud graph database)           |
+| Data       | TMDB API (movie search, cast, filmographies, images) |
+| Hosting    | Vercel                                        |
+
+## Project Structure
+
+```
+src/
+  App.js                    # Root component, AnimatePresence screen routing
+  App.css                   # All game styles (Cinema Dark theme)
+  screens/
+    SetupScreen.jsx         # Movie selection + difficulty picker
+    GameBoard.jsx           # Main gameplay — cast grid, filmography, hints, chain rail
+    VictoryScreen.jsx       # Win screen — confetti, stats ticket, share
+    GameOverScreen.jsx      # Loss screen — optimal path reveal, player journey
+  components/
+    ChainDisplay.jsx        # Horizontal chain rail + legacy list mode
+    ActorImage.jsx          # Actor photo with initials fallback
+    CastOverlay.jsx         # Cast browsing overlay
+    ErrorState.jsx          # Error display with retry
+  state/
+    gameReducer.js          # Game logic — moves, chain, hints, undo, difficulty
+    uiReducer.js            # UI state — loading, errors, overlays
+  hooks/
+    useHintSystem.js        # Background hint fetching + graduated reveal
+    useMovieAPI.js          # TMDB API calls (search, cast, filmography)
+    useMobile.js            # Mobile detection
+  utils/
+    constants.js            # TMDB base URLs, config
+  styles/
+    animations.css          # Animation utility classes
+api/
+  path.js                   # Vercel serverless — Neo4j shortest path query
+server/
+  index.js                  # Express.js dev server (same logic as api/path.js)
+```
+
+## Local Development
 
 ### Prerequisites
 
-- **Node.js** (version 18.x or later)
-- **npm** or **yarn** package manager
-- **TMDB API key** ([Get one here](https://www.themoviedb.org/settings/api))
-- **Neo4j Database** (local or cloud)
+- Node.js 18+
+- A [TMDB API key](https://www.themoviedb.org/settings/api)
+- Neo4j database (local install or [AuraDB free tier](https://neo4j.com/aura))
 
-### Local Development Setup
+### Environment Variables
 
-1. **Clone the repository**
-   ```bash
-   git clone https://github.com/hmoudam95/movie-connections.git
-   cd movie-connections
-   ```
+Create a `.env` file in the project root:
 
-2. **Install dependencies**
-   ```bash
-   npm install
-   ```
-
-3. **Configure environment variables**
-   Create a `.env` file in the root directory:
-   ```env
-   # TMDB API
-   TMDB_API_KEY=your_tmdb_api_key_here
-   
-   # Local Neo4j (Development)
-   LOCAL_NEO4J_URI=bolt://localhost:7687
-   LOCAL_NEO4J_USER=neo4j
-   LOCAL_NEO4J_PASSWORD=your_local_password
-   
-   # Cloud Neo4j (Production - AuraDB)
-   NEO4J_URI=neo4j+s://your-instance.databases.neo4j.io
-   NEO4J_USER=neo4j
-   NEO4J_PASSWORD=your_cloud_password
-   
-   # React App
-   REACT_APP_API_BASE_URL=
-   PORT=4000
-   ```
-
-4. **Set up local Neo4j database**
-   ```bash
-   # Start your local Neo4j instance
-   # Then populate with movie data
-   node populateDatabase.js
-   ```
-
-5. **Start the development servers**
-   ```bash
-   # Terminal 1: Start backend
-   cd server && npm start
-   
-   # Terminal 2: Start frontend
-   npm start
-   ```
-
-6. **Open your browser**
-   Navigate to [http://localhost:3000](http://localhost:3000)
-
-### Production Deployment
-
-#### Option 1: Vercel (Recommended)
-
-1. **Connect to GitHub**
-   - Push your code to GitHub
-   - Connect your repository to Vercel
-
-2. **Set up Neo4j AuraDB**
-   - Create a free account at [neo4j.com/aura](https://neo4j.com/aura)
-   - Create a new database instance
-   - Run the migration script:
-     ```bash
-     node scripts/migrateToCloud.js
-     ```
-
-3. **Configure Vercel environment variables**
-   In your Vercel dashboard, add:
-   ```env
-   NEO4J_URI=neo4j+s://your-instance.databases.neo4j.io
-   NEO4J_USER=neo4j
-   NEO4J_PASSWORD=your_password
-   TMDB_API_KEY=your_tmdb_api_key
-   ```
-
-4. **Deploy**
-   - Vercel will automatically deploy on git push
-   - API routes will be available at `/api/path`
-
-#### Option 2: Other Platforms
-- **Railway**: [railway.app](https://railway.app)
-- **Render**: [render.com](https://render.com)
-- **Heroku**: [heroku.com](https://heroku.com)
-
-## 🎨 Design System
-
-The project includes a complete design system with reusable components:
-
-### UI Components
-- **MovieCard** - Netflix-style 3D movie cards with hover effects
-- **Button** - Multiple variants with animations
-- **Modal** - Accessible dialog components
-- **Toast** - Notification system
-- **Card** - Flexible container components
-
-### Animations
-- **3D Hover Effects** - Realistic card rotation and perspective
-- **Particle Systems** - Floating particles on interaction
-- **Micro-interactions** - Smooth transitions and feedback
-- **Loading States** - Skeleton screens and spinners
-
-## 📊 Database Schema
-
-### Nodes
-- **Movie**: `{id, title, poster_path, release_date}`
-- **Actor**: `{id, name, profile_path}`
-
-### Relationships
-- **ACTED_IN**: `(Actor)-[:ACTED_IN]->(Movie)`
-
-### Sample Queries
-```cypher
-// Find shortest path between movies
-MATCH (start:Movie {id: "123"}), (end:Movie {id: "456"})
-MATCH p = shortestPath((start)-[:ACTED_IN*]-(end))
-RETURN [n IN nodes(p) | {id: n.id, title: n.title, type: labels(n)[0]}] AS chain
+```env
+REACT_APP_TMDB_API_KEY=your_tmdb_key
+TMDB_API_KEY=your_tmdb_key
+NEO4J_URI=bolt://localhost:7687
+NEO4J_USER=neo4j
+NEO4J_PASSWORD=your_password
 ```
 
-## 🔧 Available Scripts
+`REACT_APP_TMDB_API_KEY` is used by the frontend (CRA requirement). `TMDB_API_KEY` is used by the backend. Both can be the same key.
+
+### Run
 
 ```bash
-# Development
-npm start          # Start React development server
-npm run build      # Build for production
-npm test           # Run tests
+# Install dependencies
+npm install
+cd server && npm install && cd ..
 
-# Database
-node populateDatabase.js     # Populate local Neo4j with TMDB data
-node scripts/migrateToCloud.js  # Migrate data to cloud database
+# Terminal 1 — backend (port 4000)
+cd server && npm start
 
-# Backend (local development)
-cd server && npm start       # Start Express.js server
+# Terminal 2 — frontend (port 3000, proxies /api to 4000)
+npm start
 ```
 
-## 🎯 Game Features
+### Populate Database
 
-### Core Mechanics
-- **Random Movie Selection**: One-click popular movie generation
-- **Actor Navigation**: Browse cast with image placeholders and loading states
-- **Path Building**: Visual chain construction with smooth animations  
-- **Hint System**: On-demand optimal path suggestions
-- **Progress Tracking**: Step counter with achievement-based scoring
+```bash
+node populateDatabase.js           # Local Neo4j
+node populateAuraDatabase.js       # Cloud AuraDB
+node scripts/migrateToCloud.js     # Migrate local → cloud
+```
 
-### Advanced Features
-- **Skeleton Loading States**: Professional loading experience across all components
-- **Actor Image Handling**: Smart placeholders with initials for missing profile photos
-- **Error Recovery**: Retry buttons and graceful error handling
-- **Performance Optimized**: Debounced API calls and efficient state management
-- **Modern Animations**: Staggered grids, fade transitions, and micro-interactions
+## Database Schema
 
-## 🚀 Performance & UX
+```
+(:Movie {id, title, poster_path, release_date})
+(:Actor {id, name, profile_path})
+(:Actor)-[:ACTED_IN]->(:Movie)
+```
 
-- **Loading States**: Skeleton screens eliminate jarring content shifts
-- **Error Handling**: Graceful failures with retry mechanisms
-- **Image Optimization**: Smart actor placeholders reduce broken image issues
-- **Debounced Interactions**: Prevents excessive API calls
-- **Serverless Backend**: Scalable Vercel API routes
-- **Database**: Optimized Neo4j queries for fast pathfinding
+Single API endpoint: `GET /api/path?fromMovieId={id}&toMovieId={id}` — returns the shortest actor-movie chain. Auto-upserts both movies and their full cast before querying.
 
-## 🆕 Recent Updates
+## Roadmap
 
-### v2.0 - Modern UX Overhaul
-- ✅ **Skeleton Loading System**: Professional loading states for all components
-- ✅ **Actor Image Placeholders**: Beautiful gradient tiles with initials for missing photos
-- ✅ **Simplified UI**: Removed search complexity, focus on random movie selection
-- ✅ **Error Recovery**: Comprehensive error handling with retry functionality
-- ✅ **Modern Animations**: Staggered grid loading and smooth transitions
-- ✅ **Victory Celebrations**: Enhanced completion screen with achievement system
-- ✅ **Performance Optimization**: Eliminated auto-fetch for better loading times
+- **Phase B** — Player stats, win streaks, personal best tracking
+- **Phase C** — Challenge a friend via shareable URL
+- **Phase D** — Global leaderboard
 
-## 🤝 Contributing
+## License
 
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
+MIT
 
-## 📝 License
+## Acknowledgments
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## 🙏 Acknowledgments
-
-- **TMDB** for providing comprehensive movie data
-- **Neo4j** for the powerful graph database platform
-- **Vercel** for seamless deployment and hosting
-- **Framer Motion** for amazing animation capabilities
-- **Tailwind CSS** for the utility-first styling approach
-
----
-
-**Built with ❤️ for movie lovers and puzzle enthusiasts!** 🎬✨
+- [TMDB](https://www.themoviedb.org/) for movie data
+- [Neo4j](https://neo4j.com/) for the graph database
+- [Vercel](https://vercel.com/) for hosting
+- [Framer Motion](https://www.framer.com/motion/) for animations
