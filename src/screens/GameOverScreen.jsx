@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useMemo } from 'react';
+import React, { useRef, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import ChainDisplay from '../components/ChainDisplay';
 import { DIFFICULTY_MOVES } from '../state/gameReducer';
@@ -44,11 +44,6 @@ export default function GameOverScreen({ gameChain, cachedHintChain, movesUsed, 
     }
     return chain;
   }, [cachedHintChain]);
-
-  // Set of movie IDs the player visited (for gold tint on optimal path)
-  const playerMovieIds = useMemo(() => {
-    return new Set(gameChain.map(item => item.movie.id));
-  }, [gameChain]);
 
   return (
     <motion.div
