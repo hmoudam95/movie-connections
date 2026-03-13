@@ -1,5 +1,7 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useReducer } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { gameReducer, initialGameState } from './state/gameReducer';
+import { uiReducer, initialUIState } from './state/uiReducer';
 import './App.css';
 
 const API_KEY = process.env.REACT_APP_TMDB_API_KEY;
@@ -99,44 +101,24 @@ const getDynamicFontSize = (title) => {
 
 
 function App() {
-  // Movie & game state
-  const [startMovie, setStartMovie] = useState('');
-  const [targetMovie, setTargetMovie] = useState('');
-  const [currentMovie, setCurrentMovie] = useState(null);
-  const [selectedActor, setSelectedActor] = useState(null);
-  const [gameChain, setGameChain] = useState([]);
-  const [gameState, setGameState] = useState('setup'); // setup, playing, complete
+  const [game, gameDispatch] = useReducer(gameReducer, initialGameState);
+  const [ui, uiDispatch] = useReducer(uiReducer, initialUIState);
 
-  // UI state
-  const [cast, setCast] = useState([]);
-  const [filmography, setFilmography] = useState([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState(null);
-
-  // Loading state for different components
-  const [randomLoading, setRandomLoading] = useState({ start: false, target: false });
-  const [actorLoading, setActorLoading] = useState(false);
-  const [hintLoading, setHintLoading] = useState(false);
-
-  // Error states for specific components
-  const [randomError, setRandomError] = useState({ start: null, target: null });
-
-  // ** State for hint display **
-  const [hintChain, setHintChain] = useState(null);
-
-  // ** Background hint fetching states **
-  const [backgroundHintFetching, setBackgroundHintFetching] = useState(false);
-  const [backgroundHintReady, setBackgroundHintReady] = useState(false);
-  const [backgroundFetchController, setBackgroundFetchController] = useState(null);
-  const [cachedHintChain, setCachedHintChain] = useState(null); // Store background result separately
-
-  // ** State for target movie cast preview **
-  const [showTargetCast, setShowTargetCast] = useState(false);
-  const [targetMovieCast, setTargetMovieCast] = useState([]);
-  const [targetCastLoading, setTargetCastLoading] = useState(false);
-
-  // ** Mobile-specific state **
+  // These stay as useState — not serializable / independent of game logic
   const [isMobile, setIsMobile] = useState(false);
+  const [backgroundHintFetching, setBackgroundHintFetching] = useState(false);
+  const [backgroundFetchController, setBackgroundFetchController] = useState(null);
+
+  // Destructure for convenience (keeps the rest of the file readable during migration)
+  const {
+    phase: gameState, startMovie, targetMovie, currentMovie,
+    selectedActor, chain: gameChain, cast, filmography,
+    targetMovieCast, showTargetCast, hintChain, cachedHintChain,
+  } = game;
+  const {
+    loading: isLoading, randomLoading, actorLoading,
+    hintLoading, targetCastLoading, error, randomError,
+  } = ui;
 
   // Mobile detection
   useEffect(() => {
@@ -153,170 +135,145 @@ function App() {
 
   // Fetch movie details + credits
   const fetchMovieDetails = async (movieId) => {
-    setIsLoading(true);
+    uiDispatch({ type: 'SET_LOADING', value: true });
     try {
       const res = await fetch(
         `${API_BASE_URL}/movie/${movieId}?api_key=${API_KEY}&append_to_response=credits`
       );
       return await res.json();
     } catch (err) {
-      setError('Failed to fetch movie details');
+      uiDispatch({ type: 'SET_ERROR', message: 'Failed to fetch movie details' });
       console.error(err);
       return null;
     } finally {
-      setIsLoading(false);
+      uiDispatch({ type: 'SET_LOADING', value: false });
     }
   };
 
-  // Fetch target movie cast for preview
+  // Fetch target movie cast for preview — returns the cast array
   const fetchTargetMovieCast = async (movieId) => {
-    setTargetCastLoading(true);
+    uiDispatch({ type: 'SET_TARGET_CAST_LOADING', value: true });
     try {
       const res = await fetch(
         `${API_BASE_URL}/movie/${movieId}?api_key=${API_KEY}&append_to_response=credits`
       );
       const data = await res.json();
-      // Get top 8 actors, sorted by order (main cast first)
       const topCast = data.credits.cast
         .slice()
         .sort((a, b) => a.order - b.order)
         .slice(0, 8);
-      setTargetMovieCast(topCast);
+      return topCast;
     } catch (err) {
       console.error('Failed to fetch target movie cast:', err);
-      setTargetMovieCast([]);
+      return [];
     } finally {
-      setTargetCastLoading(false);
+      uiDispatch({ type: 'SET_TARGET_CAST_LOADING', value: false });
     }
   };
 
   // Fetch actor filmography
   const fetchActorFilmography = async (actorId) => {
-    setActorLoading(true);
+    uiDispatch({ type: 'SET_ACTOR_LOADING', value: true });
     try {
       const res = await fetch(
         `${API_BASE_URL}/person/${actorId}/movie_credits?api_key=${API_KEY}`
       );
       const data = await res.json();
-      setFilmography(
-        data.cast
-          .slice()
-          .sort((a, b) => {
-            const ay = a.release_date ? +a.release_date.slice(0, 4) : 0;
-            const by = b.release_date ? +b.release_date.slice(0, 4) : 0;
-            return by - ay;
-          })
-      );
+      const sorted = data.cast
+        .slice()
+        .sort((a, b) => {
+          const ay = a.release_date ? +a.release_date.slice(0, 4) : 0;
+          const by = b.release_date ? +b.release_date.slice(0, 4) : 0;
+          return by - ay;
+        });
+      gameDispatch({ type: 'SET_FILMOGRAPHY', filmography: sorted });
     } catch (err) {
-      setError("Failed to fetch actor's filmography");
+      uiDispatch({ type: 'SET_ERROR', message: "Failed to fetch actor's filmography" });
       console.error(err);
     } finally {
-      setActorLoading(false);
+      uiDispatch({ type: 'SET_ACTOR_LOADING', value: false });
     }
   };
 
   // Get a random blockbuster movie
   const getRandomMovie = useCallback(
-    async (setMovie, isStart) => {
+    async (isStart) => {
       const randomType = isStart ? 'start' : 'target';
-      
-      // Set specific loading state
-      setRandomLoading(prev => ({ ...prev, [randomType]: true }));
-      setRandomError(prev => ({ ...prev, [randomType]: null }));
-      
+
+      uiDispatch({ type: 'SET_RANDOM_LOADING', which: randomType, value: true });
+      uiDispatch({ type: 'SET_RANDOM_ERROR', which: randomType, message: null });
+
       try {
         const today = new Date().toISOString().split('T')[0];
         const page = Math.floor(Math.random() * 5) + 1;
         const res = await fetch(
           `${API_BASE_URL}/discover/movie?api_key=${API_KEY}&sort_by=popularity.desc&vote_count.gte=1000&primary_release_date.lte=${today}&page=${page}`
         );
-        
+
         if (!res.ok) {
           throw new Error(`HTTP ${res.status}: ${res.statusText}`);
         }
-        
+
         const { results } = await res.json();
         const candidates = results.filter(m => m.poster_path);
-        
+
         if (candidates.length === 0) {
           throw new Error('No movies found with posters');
         }
-        
+
         const choice = candidates[Math.floor(Math.random() * candidates.length)];
-        
+
         if (isStart) {
           const details = await fetchMovieDetails(choice.id);
-          setStartMovie(choice);
-          setCurrentMovie(details);
-          setCast(details.credits.cast.slice().sort((a, b) => a.order - b.order));
-          setGameChain([{ movie: choice, actor: null }]);
+          gameDispatch({ type: 'SET_START_MOVIE', movie: choice, details });
         } else {
-          setTargetMovie(choice);
-          // Fetch cast details for target movie preview
-          await fetchTargetMovieCast(choice.id);
+          const topCast = await fetchTargetMovieCast(choice.id);
+          gameDispatch({ type: 'SET_TARGET_MOVIE', movie: choice, cast: topCast });
         }
-        
-        setRandomError(prev => ({ ...prev, [randomType]: null }));
+
+        uiDispatch({ type: 'SET_RANDOM_ERROR', which: randomType, message: null });
       } catch (err) {
         console.error('Random movie error:', err);
-        setRandomError(prev => ({ ...prev, [randomType]: err.message }));
+        uiDispatch({ type: 'SET_RANDOM_ERROR', which: randomType, message: err.message });
       } finally {
-        setRandomLoading(prev => ({ ...prev, [randomType]: false }));
+        uiDispatch({ type: 'SET_RANDOM_LOADING', which: randomType, value: false });
       }
     },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     []
   );
 
-  // Auto‑randomize on mount
+  // Auto-randomize on mount
   useEffect(() => {
-    if (!startMovie) getRandomMovie(setStartMovie, true);
-    if (!targetMovie) getRandomMovie(setTargetMovie, false);
+    if (!startMovie) getRandomMovie(true);
+    if (!targetMovie) getRandomMovie(false);
   }, [getRandomMovie, startMovie, targetMovie]);
 
 
   const handleActorSelect = async (actor) => {
-    setSelectedActor(actor);
+    gameDispatch({ type: 'SELECT_ACTOR', actor });
     await fetchActorFilmography(actor.id);
   };
 
   const handleFilmographySelect = async (movieSummary) => {
-    // movieSummary is just the flat object from the actor's credit list,
-    // so we need to pull in its credits before we can use it.
     if (gameChain.some(item => item.movie.id === movieSummary.id)) {
-      setError('This movie is already in your chain!');
+      uiDispatch({ type: 'SET_ERROR', message: 'This movie is already in your chain!' });
       return;
     }
 
-    setIsLoading(true);
+    uiDispatch({ type: 'SET_LOADING', value: true });
     try {
       const details = await fetchMovieDetails(movieSummary.id);
-
-      // add the full-details movie + actor into the chain
-      setGameChain(chain => [
-        ...chain,
-        { movie: details, actor: selectedActor }
-      ]);
-      setCurrentMovie(details);
-
-      // now safe to read details.credits.cast
-      setCast(
-        details.credits.cast
-          .slice()
-          .sort((a, b) => a.order - b.order)
-      );
-
-      setSelectedActor(null);
-      setFilmography([]);
+      gameDispatch({ type: 'SELECT_MOVIE', movie: movieSummary, details, actor: selectedActor });
 
       if (details.id === targetMovie.id) {
-        // Add delay for smooth transition to victory screen
-        setTimeout(() => setGameState('complete'), 300);
+        setTimeout(() => gameDispatch({ type: 'COMPLETE_GAME' }), 300);
       }
     } catch (err) {
       console.error(err);
-      setError('Failed to load movie details');
+      uiDispatch({ type: 'SET_ERROR', message: 'Failed to load movie details' });
     } finally {
-      setIsLoading(false);
+      uiDispatch({ type: 'SET_LOADING', value: false });
     }
   };
 
@@ -324,68 +281,44 @@ function App() {
   // Start & reset with smooth transitions
   const startGame = () => {
     if (startMovie && targetMovie) {
-      // Add a small delay for smooth transition
-      setTimeout(() => setGameState('playing'), 100);
+      setTimeout(() => gameDispatch({ type: 'START_GAME' }), 100);
     } else {
-      setError('Please select both a starting and target movie');
+      uiDispatch({ type: 'SET_ERROR', message: 'Please select both a starting and target movie' });
     }
   };
+
   const resetGame = () => {
-    // Cancel any ongoing background fetch
     if (backgroundFetchController) {
       backgroundFetchController.abort();
       setBackgroundFetchController(null);
     }
-    
-    // Add a small delay for smooth transition
     setTimeout(() => {
-      setStartMovie('');
-      setTargetMovie('');
-      setCurrentMovie(null);
-      setSelectedActor(null);
-      setGameChain([]);
-      setCast([]);
-      setFilmography([]);
-      setGameState('setup');
-      setError(null);
-      setHintChain(null);
-      setRandomError({ start: null, target: null });
-      setShowTargetCast(false);
-      setTargetMovieCast([]);
-      setTargetCastLoading(false);
-      
-      // Reset background hint states
+      gameDispatch({ type: 'RESET' });
+      uiDispatch({ type: 'RESET_UI' });
       setBackgroundHintFetching(false);
-      setBackgroundHintReady(false);
       setBackgroundFetchController(null);
-      setCachedHintChain(null);
     }, 100);
   };
 
   // ** Background hint fetching (silent, non-blocking) **
   const fetchHintInBackground = useCallback(async () => {
     if (!currentMovie?.id || !targetMovie?.id) return;
-    if (backgroundHintReady || backgroundHintFetching) return; // Avoid duplicate fetches
+    if (cachedHintChain || backgroundHintFetching) return;
 
-    // Create AbortController for cancellation
     const controller = new AbortController();
     setBackgroundFetchController(controller);
     setBackgroundHintFetching(true);
-    
+
     try {
       const res = await fetch(
         `${BACKEND_BASE}/api/path?fromMovieId=${currentMovie.id}&toMovieId=${targetMovie.id}`,
         { signal: controller.signal }
       );
-      
       if (controller.signal.aborted) return;
-      
       const data = await res.json();
       if (!data.error && data.chain) {
-        setCachedHintChain(data.chain); // Store in cache, don't display yet
-        setBackgroundHintReady(true);
+        gameDispatch({ type: 'CACHE_HINT', chain: data.chain });
       }
-      // Silent error handling - don't show errors to user for background fetches
     } catch (err) {
       if (!controller.signal.aborted) {
         console.log('Background hint fetch failed (silent):', err.message);
@@ -396,65 +329,35 @@ function App() {
         setBackgroundFetchController(null);
       }
     }
-  }, [currentMovie?.id, targetMovie?.id, backgroundHintReady, backgroundHintFetching]);
+  }, [currentMovie?.id, targetMovie?.id, cachedHintChain, backgroundHintFetching]);
 
-  // ** Fetch hint on button click (now uses cached results when available) **
+  // ** Fetch hint on button click **
   const fetchHint = async () => {
     if (!currentMovie?.id || !targetMovie?.id) return;
-    
-    // If background fetch completed, show cached results instantly
-    if (backgroundHintReady && cachedHintChain) {
-      setHintChain(cachedHintChain); // Display the cached result
-      return;
-    }
-    
-    // If background fetch is in progress, wait for it
-    if (backgroundHintFetching) {
-      setHintLoading(true);
-      
-      // Set up a listener for background fetch completion
-      const checkBackgroundComplete = setInterval(() => {
-        if (backgroundHintReady && cachedHintChain) {
-          setHintChain(cachedHintChain); // Display cached result
-          setHintLoading(false);
-          clearInterval(checkBackgroundComplete);
-        } else if (!backgroundHintFetching) {
-          // Background fetch failed, start traditional fetch
-          clearInterval(checkBackgroundComplete);
-          traditionalFetch();
-        }
-      }, 100);
-      
-      // Timeout fallback (10 seconds)
-      setTimeout(() => {
-        if (hintLoading) {
-          clearInterval(checkBackgroundComplete);
-          traditionalFetch();
-        }
-      }, 10000);
-      
-      return;
-    }
-    
-    // Start traditional fetch immediately
-    traditionalFetch();
-  };
 
-  // Helper function for traditional hint fetching
-  const traditionalFetch = async () => {
-    setHintLoading(true);
+    // If background fetch completed, show cached results instantly
+    if (cachedHintChain) {
+      gameDispatch({ type: 'SHOW_HINT' });
+      return;
+    }
+
+    // Otherwise do a direct fetch
+    uiDispatch({ type: 'SET_HINT_LOADING', value: true });
     try {
       const res = await fetch(
         `${BACKEND_BASE}/api/path?fromMovieId=${currentMovie.id}&toMovieId=${targetMovie.id}`
       );
       const data = await res.json();
-      if (data.error) setError(data.error);
-      else setHintChain(data.chain);
+      if (data.error) {
+        uiDispatch({ type: 'SET_ERROR', message: data.error });
+      } else {
+        gameDispatch({ type: 'SET_HINT', chain: data.chain });
+      }
     } catch (err) {
       console.error(err);
-      setError('Failed to fetch hint');
+      uiDispatch({ type: 'SET_ERROR', message: 'Failed to fetch hint' });
     } finally {
-      setHintLoading(false);
+      uiDispatch({ type: 'SET_HINT_LOADING', value: false });
     }
   };
 
@@ -494,7 +397,7 @@ function App() {
           <h2>Starting Movie</h2>
           <button 
             className={`button-secondary ${randomLoading.start ? 'button-loading' : ''}`} 
-            onClick={() => getRandomMovie(setStartMovie, true)}
+            onClick={() => getRandomMovie(true)}
             disabled={randomLoading.start}
           >
             🎲 Get Random Movie
@@ -505,7 +408,7 @@ function App() {
             <ErrorState
               title="Failed to Load Movie"
               description={randomError.start}
-              onRetry={() => getRandomMovie(setStartMovie, true)}
+              onRetry={() => getRandomMovie(true)}
               retryText="Try Another Movie"
             />
           )}
@@ -532,7 +435,7 @@ function App() {
           <h2>Target Movie</h2>
           <button 
             className={`button-secondary ${randomLoading.target ? 'button-loading' : ''}`} 
-            onClick={() => getRandomMovie(setTargetMovie, false)}
+            onClick={() => getRandomMovie(false)}
             disabled={randomLoading.target}
           >
             🎲 Get Random Movie
@@ -543,7 +446,7 @@ function App() {
             <ErrorState
               title="Failed to Load Movie"
               description={randomError.target}
-              onRetry={() => getRandomMovie(setTargetMovie, false)}
+              onRetry={() => getRandomMovie(false)}
               retryText="Try Another Movie"
             />
           )}
@@ -609,7 +512,7 @@ function App() {
               <h4>Target:</h4>
               <div 
                 className="compact-movie-card"
-                onClick={() => setShowTargetCast(!showTargetCast)}
+                onClick={() => gameDispatch({ type: 'TOGGLE_TARGET_CAST' })}
                 style={{ cursor: 'pointer' }}
               >
                 <img
@@ -667,10 +570,10 @@ function App() {
       <div className="hint-section animate-in animate-in-delay-3">
         <button 
           onClick={fetchHint} 
-          className={`hint-button ${hintLoading ? 'button-loading' : ''} ${backgroundHintReady && cachedHintChain ? 'hint-ready' : ''}`}
+          className={`hint-button ${hintLoading ? 'button-loading' : ''} ${cachedHintChain ? 'hint-ready' : ''}`}
           disabled={hintLoading}
         >
-          {backgroundHintReady && cachedHintChain ? '⚡ Show Shortest Path (Ready)' : '💡 Show Shortest Path'}
+          {cachedHintChain ? '⚡ Show Shortest Path (Ready)' : '💡 Show Shortest Path'}
         </button>
         {hintLoading && (
           <div className="loading-content">
@@ -695,7 +598,7 @@ function App() {
       {selectedActor ? (
         <div className="filmography-section animate-in animate-in-delay-4">
           <h2>Movies with {selectedActor.name}</h2>
-          <button className="button-ghost" onClick={() => setSelectedActor(null)}>← Back to Cast</button>
+          <button className="button-ghost" onClick={() => gameDispatch({ type: 'DESELECT_ACTOR' })}>← Back to Cast</button>
           {actorLoading ? (
             <div className="skeleton-grid">
               {[...Array(8)].map((_, i) => (
@@ -856,8 +759,8 @@ function App() {
               navigator.share({ text });
             } else {
               navigator.clipboard.writeText(text);
-              setError('Victory message copied to clipboard! 🎉');
-              setTimeout(() => setError(null), 3000);
+              uiDispatch({ type: 'SET_ERROR', message: 'Victory message copied to clipboard! 🎉' });
+              setTimeout(() => uiDispatch({ type: 'CLEAR_ERROR' }), 3000);
             }
           }}>
             📤 Share Victory
@@ -885,7 +788,7 @@ function App() {
       {error && (
         <div className="error-message">
           <p>{error}</p>
-          <button onClick={() => setError(null)}>✕</button>
+          <button onClick={() => uiDispatch({ type: 'CLEAR_ERROR' })}>✕</button>
         </div>
       )}
       
@@ -905,7 +808,7 @@ function App() {
               <h4 className="cast-overlay-title">Cast Preview</h4>
               <button 
                 className="cast-overlay-close"
-                onClick={() => setShowTargetCast(false)}
+                onClick={() => gameDispatch({ type: 'HIDE_TARGET_CAST' })}
               >
                 ✕
               </button>
@@ -963,7 +866,7 @@ function App() {
               backgroundColor: 'rgba(0, 0, 0, 0.4)',
               zIndex: 999
             }}
-            onClick={() => setShowTargetCast(false)}
+            onClick={() => gameDispatch({ type: 'HIDE_TARGET_CAST' })}
           />
         )}
       </AnimatePresence>
