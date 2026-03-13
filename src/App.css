@@ -694,7 +694,8 @@ input[type="text"]::placeholder {
 @media (max-width: 768px) {
   .movie-selectors {
     grid-template-columns: 1fr;
-    gap: var(--space-xl);
+    gap: var(--space-sm);
+    margin-bottom: var(--space-md);
   }
 }
 
@@ -767,6 +768,56 @@ input[type="text"]::placeholder {
   color: var(--text-secondary);
   font-size: 0.875rem;
   margin: 0;
+}
+
+/* Mobile setup screen — compact layout to fit above fold */
+@media (max-width: 768px) {
+  .setup-screen h1 {
+    font-size: 1.75rem;
+    margin-bottom: var(--space-xs);
+  }
+
+  .setup-screen p {
+    margin-bottom: var(--space-sm);
+    font-size: 0.875rem;
+  }
+
+  .movie-selector h2 {
+    font-size: 1.1rem;
+    margin-bottom: var(--space-xs);
+  }
+
+  .movie-selector button {
+    margin-bottom: var(--space-xs);
+    padding: var(--space-xs) var(--space-lg);
+    font-size: 0.875rem;
+  }
+
+  .selected-movie {
+    flex-direction: row;
+    padding: var(--space-sm);
+    max-width: 100%;
+    gap: var(--space-sm);
+    text-align: left;
+  }
+
+  .selected-movie img {
+    width: 60px;
+    height: 90px;
+    margin-bottom: 0;
+    flex-shrink: 0;
+  }
+
+  .selected-movie h3 {
+    height: auto;
+    font-size: 0.95rem;
+    text-align: left;
+  }
+
+  .selected-movie p {
+    font-size: 0.8rem;
+    text-align: left;
+  }
 }
 
 /* Network Graph Styles */
@@ -928,14 +979,20 @@ input[type="text"]::placeholder {
 
 /* Compact Movie Header - Mobile First */
 .movies-header {
+  position: sticky;
+  top: 0;
+  z-index: 100;
   margin-bottom: var(--space-xl);
+  padding-top: var(--space-sm);
+  padding-bottom: var(--space-sm);
+  background: var(--bg-primary);
 }
 
 .header-content {
-  background: var(--surface);
+  background: var(--bg-secondary);
   border: 1px solid var(--border);
   border-radius: var(--radius-xl);
-  padding: var(--space-lg);
+  padding: var(--space-md);
 }
 
 .movie-pair {
@@ -987,6 +1044,7 @@ input[type="text"]::placeholder {
 
 .compact-movie-card img {
   width: 60px;
+  min-width: 50px;
   height: 90px;
   object-fit: cover;
   border-radius: var(--radius-md);
@@ -995,6 +1053,7 @@ input[type="text"]::placeholder {
 
 .movie-title {
   font-size: 0.875rem;
+  min-font-size: 14px;
   font-weight: 500;
   color: var(--text-primary);
   line-height: 1.3;
@@ -1054,12 +1113,13 @@ input[type="text"]::placeholder {
   
   .compact-movie-card img {
     width: 50px;
+    min-width: 50px;
     height: 75px;
   }
-  
+
   .movie-title {
-    font-size: 0.75rem;
-    -webkit-line-clamp: 1;
+    font-size: 0.875rem;
+    -webkit-line-clamp: 2;
   }
   
   .vs-icon {
@@ -1073,6 +1133,31 @@ input[type="text"]::placeholder {
   .steps-label {
     font-size: 0.5rem;
   }
+}
+
+/* Compact single-movie chain */
+.chain-compact {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: var(--space-sm) var(--space-md);
+  margin-bottom: var(--space-md);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+}
+
+.chain-compact img {
+  width: 32px;
+  height: 48px;
+  object-fit: cover;
+  border-radius: var(--radius-sm);
+}
+
+.chain-compact span {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--text-secondary);
 }
 
 /* Game Chain */
@@ -1221,6 +1306,24 @@ input[type="text"]::placeholder {
 .filmography-item p {
   font-size: 0.75rem;
   color: var(--text-secondary);
+}
+
+.show-all-cast-btn {
+  display: block;
+  margin: var(--space-lg) auto 0;
+  padding: var(--space-sm) var(--space-xl);
+  background: var(--surface-hover);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.show-all-cast-btn:hover {
+  border-color: var(--accent-primary);
+  color: var(--text-primary);
 }
 
 /* Victory Screen */
@@ -1708,7 +1811,8 @@ input[type="text"]::placeholder {
 .actor-placeholder {
   width: 100%;
   height: 150px;
-  background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+  background: linear-gradient(135deg, var(--bg-tertiary), var(--surface-hover));
+  border: 1px solid var(--border);
   border-radius: var(--radius-md);
   display: flex;
   align-items: center;
@@ -1725,15 +1829,13 @@ input[type="text"]::placeholder {
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(255, 255, 255, 0.1);
-  backdrop-filter: blur(10px);
+  background: rgba(255, 255, 255, 0.03);
 }
 
 .actor-initials {
-  font-size: 2rem;
-  font-weight: 700;
-  color: white;
-  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--text-secondary);
   z-index: 1;
   position: relative;
 }
@@ -1923,6 +2025,11 @@ input[type="text"]::placeholder {
   
   .cast-item img,
   .filmography-item img {
+    height: 120px;
+  }
+
+  .actor-placeholder,
+  .actor-loading {
     height: 120px;
   }
 }

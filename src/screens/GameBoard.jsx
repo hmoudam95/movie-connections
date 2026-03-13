@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useMemo } from 'react';
 import ActorImage from '../components/ActorImage';
 import ActorCardSkeleton from '../components/ActorCardSkeleton';
 import ChainDisplay from '../components/ChainDisplay';
@@ -10,6 +10,15 @@ export default function GameBoard({
   actorLoading, hintLoading,
   gameDispatch, handleActorSelect, handleFilmographySelect, fetchHint,
 }) {
+  const [showAllCast, setShowAllCast] = useState(false);
+
+  const creditedCast = useMemo(
+    () => cast.filter(a => !a.character?.toLowerCase().includes('uncredited')),
+    [cast]
+  );
+  const visibleCast = showAllCast ? creditedCast : creditedCast.slice(0, 15);
+  const hiddenCount = creditedCast.length - 15;
+
   return (
     <div className="game-board page-transition">
       {/* Compact movie header */}
@@ -62,10 +71,14 @@ export default function GameBoard({
       </div>
 
       {/* Chain visualization */}
-      <div className="game-chain animate-in animate-in-delay-1">
-        <h2>Your Movie Chain</h2>
+      {gameChain.length <= 1 ? (
         <ChainDisplay chain={gameChain} />
-      </div>
+      ) : (
+        <div className="game-chain animate-in animate-in-delay-1">
+          <h2>Your Movie Chain</h2>
+          <ChainDisplay chain={gameChain} />
+        </div>
+      )}
 
       {/* Hint button & display */}
       <div className="hint-section animate-in animate-in-delay-3">
@@ -135,7 +148,7 @@ export default function GameBoard({
         <div className="cast-section animate-in animate-in-delay-4">
           <h2>Select an Actor</h2>
           <div className="cast-list stagger-grid">
-            {cast.map(a => (
+            {visibleCast.map(a => (
               <div
                 key={a.id}
                 className="cast-item"
@@ -147,6 +160,22 @@ export default function GameBoard({
               </div>
             ))}
           </div>
+          {!showAllCast && hiddenCount > 0 && (
+            <button
+              className="show-all-cast-btn"
+              onClick={() => setShowAllCast(true)}
+            >
+              Show all {creditedCast.length} cast members
+            </button>
+          )}
+          {showAllCast && creditedCast.length > 15 && (
+            <button
+              className="show-all-cast-btn"
+              onClick={() => setShowAllCast(false)}
+            >
+              Show fewer
+            </button>
+          )}
         </div>
       )}
     </div>
