@@ -273,20 +273,6 @@ function App() {
     if (!targetMovie) getRandomMovie(setTargetMovie, false);
   }, [getRandomMovie, startMovie, targetMovie]);
 
-  // Handle manual selection (now only for random movies)
-  const handleMovieSelect = async (movie, isStart) => {
-    const details = await fetchMovieDetails(movie.id);
-    if (isStart) {
-      setStartMovie(movie);
-      setCurrentMovie(details);
-      setCast(details.credits.cast.slice().sort((a, b) => a.order - b.order));
-      setGameChain([{ movie, actor: null }]);
-    } else {
-      setTargetMovie(movie);
-      // Fetch cast details for target movie preview
-      await fetchTargetMovieCast(movie.id);
-    }
-  };
 
   const handleActorSelect = async (actor) => {
     setSelectedActor(actor);
@@ -777,12 +763,6 @@ function App() {
       resetGame();
     } else if (gameState === 'complete') {
       resetGame();
-    }
-  };
-
-  const handleSwipeUp = () => {
-    if (gameState === 'playing' && !showTargetCast) {
-      setShowTargetCast(true);
     }
   };
 
