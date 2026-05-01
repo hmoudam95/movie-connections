@@ -10,6 +10,12 @@
       "memory": 512
     }
   },
+  "crons": [
+    {
+      "path": "/api/health",
+      "schedule": "17 4 * * *"
+    }
+  ],
   "headers": [
     {
       "source": "/static/(.*)",
