@@ -6,6 +6,13 @@ export const initialUIState = {
   hintLoading: false,
   targetCastLoading: false,
 
+  // Hint that the user clicked before the background fetch resolved.
+  // Auto-resolves to a real hint when cachedHintChain arrives.
+  pendingHintLevel: null,
+
+  // Transient banner for retryable upstream errors (e.g. TMDB 429)
+  rateLimitBanner: null,
+
   // Errors
   error: null,
   randomError: { start: null, target: null },
@@ -49,6 +56,22 @@ export function uiReducer(state, action) {
 
     case 'CLEAR_ERROR': {
       return { ...state, error: null };
+    }
+
+    case 'SET_PENDING_HINT': {
+      return { ...state, pendingHintLevel: action.level };
+    }
+
+    case 'CLEAR_PENDING_HINT': {
+      return { ...state, pendingHintLevel: null };
+    }
+
+    case 'SET_RATE_LIMIT_BANNER': {
+      return { ...state, rateLimitBanner: action.message };
+    }
+
+    case 'CLEAR_RATE_LIMIT_BANNER': {
+      return { ...state, rateLimitBanner: null };
     }
 
     case 'RESET_UI': {

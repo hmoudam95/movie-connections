@@ -13,9 +13,10 @@ export default function GameBoard({
   currentMovie, targetMovie, gameChain, selectedActor,
   cast, filmography, cachedHintChain,
   hintLevel, hintsUsed, movesRemaining, movesUsed, difficulty,
-  actorLoading, hintLoading,
+  actorLoading, hintLoading, pendingHintLevel,
   gameDispatch, handleActorSelect, handleFilmographySelect, handleHint,
 }) {
+  const isHintPending = pendingHintLevel != null;
   const [showAllCast, setShowAllCast] = useState(false);
   const [filmographySearch, setFilmographySearch] = useState('');
   const chainScrollRef = useRef(null);
@@ -247,6 +248,17 @@ export default function GameBoard({
               <div className="filmography-empty">
                 <p>No movies found for "{filmographySearch}"</p>
               </div>
+            ) : filmography.length === 0 ? (
+              <div className="filmography-empty">
+                <p>No filmography available for {selectedActor.name} — pick another actor.</p>
+                <button
+                  className="back-button-v3"
+                  onClick={() => gameDispatch({ type: 'DESELECT_ACTOR' })}
+                  style={{ marginTop: 12 }}
+                >
+                  ← Back to Cast
+                </button>
+              </div>
             ) : groupedFilmography ? (
               <div className="filmography-grouped-v3">
                 {groupedFilmography.map(([decade, movies]) => (
@@ -320,6 +332,13 @@ export default function GameBoard({
             transition={{ duration: 0.25 }}
           >
             <h2 className="cast-title-v3">Who's your connection?</h2>
+            {visibleCast.length === 0 ? (
+              <div className="cast-grid-v3">
+                {[...Array(12)].map((_, i) => (
+                  <ActorCardSkeleton key={`cast-skel-${i}`} />
+                ))}
+              </div>
+            ) : null}
             <div className="cast-grid-v3">
               {visibleCast.map((a, idx) => (
                 <motion.div
@@ -380,6 +399,7 @@ export default function GameBoard({
           {nextHintLevel <= 3 ? (
             <motion.button
               onClick={() => {
+                if (isHintPending) return;
                 if (nextHintLevel === 1) {
                   handleHint(1);
                 } else {
@@ -389,12 +409,16 @@ export default function GameBoard({
                   }
                 }
               }}
-              className={`bottom-hint-btn ${cachedHintChain ? 'hint-ready' : ''}`}
-              disabled={hintLoading}
-              whileTap={{ scale: 0.95 }}
+              className={`bottom-hint-btn ${cachedHintChain && !isHintPending ? 'hint-ready' : ''} ${isHintPending ? 'hint-pending' : ''}`}
+              disabled={hintLoading || isHintPending}
+              aria-busy={isHintPending}
+              whileTap={isHintPending ? undefined : { scale: 0.95 }}
             >
-              {hintLoading ? (
-                <span className="loading-spinner" style={{ width: 16, height: 16 }} />
+              {hintLoading || isHintPending ? (
+                <span className="hint-pending-inner">
+                  <span className="loading-spinner" style={{ width: 14, height: 14 }} />
+                  <span className="hint-pending-label">Loading hint…</span>
+                </span>
               ) : (
                 <>
                   {nextHintLevel === 1 && '💡 Hint (free)'}

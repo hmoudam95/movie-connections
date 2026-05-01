@@ -2090,6 +2090,86 @@ input[type="text"]::placeholder {
   animation: pulse-ready 2s infinite;
 }
 
+.bottom-hint-btn.hint-pending {
+  background: linear-gradient(
+    100deg,
+    rgba(167, 139, 250, 0.18) 0%,
+    rgba(34, 211, 238, 0.32) 50%,
+    rgba(167, 139, 250, 0.18) 100%
+  ) !important;
+  background-size: 200% 100% !important;
+  border-color: rgba(34, 211, 238, 0.45) !important;
+  color: var(--text-primary) !important;
+  cursor: progress !important;
+  animation: hint-shimmer 1.6s ease-in-out infinite;
+}
+
+.hint-pending-inner {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.hint-pending-label {
+  font-size: 0.75rem;
+  letter-spacing: 0.02em;
+  opacity: 0.9;
+}
+
+@keyframes hint-shimmer {
+  0%   { background-position: 100% 50%; }
+  100% { background-position: -100% 50%; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bottom-hint-btn.hint-pending { animation: none; }
+}
+
+/* ===== TMDB rate-limit transient banner ===== */
+.rate-limit-banner {
+  position: fixed;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 1000;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  background: rgba(15, 23, 42, 0.92);
+  color: #fbbf24;
+  border: 1px solid rgba(251, 191, 36, 0.4);
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35);
+  animation: banner-fade-in 0.25s ease-out;
+}
+
+.rate-limit-banner__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #fbbf24;
+  animation: banner-dot-pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes banner-fade-in {
+  from { opacity: 0; transform: translate(-50%, -8px); }
+  to   { opacity: 1; transform: translate(-50%, 0); }
+}
+
+@keyframes banner-dot-pulse {
+  0%, 100% { opacity: 0.4; transform: scale(0.85); }
+  50%      { opacity: 1;   transform: scale(1.1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rate-limit-banner__dot { animation: none; }
+}
+
 /* Legacy compat: keep old movie-title class for victory/other screens */
 .movie-title {
   font-size: 0.875rem;

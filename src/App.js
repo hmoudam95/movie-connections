@@ -28,6 +28,7 @@ function App() {
   const {
     loading: isLoading, randomLoading, actorLoading,
     hintLoading, targetCastLoading, error, randomError,
+    pendingHintLevel, rateLimitBanner,
   } = ui;
 
   const { fetchHintInBackground, cancelHintFetch } = useHintSystem(
@@ -39,6 +40,18 @@ function App() {
     if (!startMovie) getRandomMovie(true);
     if (!targetMovie) getRandomMovie(false);
   }, [getRandomMovie, startMovie, targetMovie]);
+
+  // Warm Neo4j once on app mount during idle so the first hint doesn't pay
+  // the ~5s cold-start cost when the user clicks "Hint".
+  useEffect(() => {
+    const ric = window.requestIdleCallback || ((cb) => setTimeout(cb, 1500));
+    const cancel = window.cancelIdleCallback || clearTimeout;
+    const handle = ric(() => {
+      const base = process.env.REACT_APP_API_BASE_URL || '';
+      fetch(`${base}/api/health`).catch(() => { /* silent */ });
+    });
+    return () => cancel(handle);
+  }, []);
 
   const handleActorSelect = async (actor) => {
     gameDispatch({ type: 'SELECT_ACTOR', actor });
@@ -71,46 +84,42 @@ function App() {
     }
   };
 
-  // Graduated hint handler
-  const handleHint = (level) => {
-    if (!cachedHintChain) {
-      // Hint not ready yet — trigger background fetch
-      fetchHintInBackground();
-      uiDispatch({ type: 'SET_ERROR', message: 'Hint is loading... try again in a moment.' });
-      return;
-    }
-
-    const optimalSteps = Math.floor((cachedHintChain.length - 1) / 2); // movies only
+  // Resolves a hint level against the cached hint chain.
+  // Pure function — does not handle "still loading" state.
+  const resolveHint = (level, chain) => {
+    const optimalSteps = Math.floor((chain.length - 1) / 2); // movies only
 
     if (level === 1) {
-      // Free hint: show path length
       gameDispatch({
         type: 'USE_HINT',
         level: 1,
         content: `The shortest path is ${optimalSteps} step${optimalSteps !== 1 ? 's' : ''}`,
         moveCost: 0,
       });
-    } else if (level === 2) {
-      // Costs 1 move: show first actor in optimal path
+      return;
+    }
+
+    if (level === 2) {
       if (movesRemaining < 1) {
         uiDispatch({ type: 'SET_ERROR', message: 'Not enough moves for this hint!' });
         return;
       }
-      const firstActor = cachedHintChain.find(n => n.type === 'Actor');
+      const firstActor = chain.find(n => n.type === 'Actor');
       gameDispatch({
         type: 'USE_HINT',
         level: 2,
         content: firstActor ? `Try looking for ${firstActor.title}` : 'No actor hint available',
         moveCost: 1,
       });
-    } else if (level === 3) {
-      // Costs 2 moves: show next movie in optimal path
+      return;
+    }
+
+    if (level === 3) {
       if (movesRemaining < 2) {
         uiDispatch({ type: 'SET_ERROR', message: 'Not enough moves for this hint!' });
         return;
       }
-      // Find the second movie in the optimal path (first is the start movie)
-      const movies = cachedHintChain.filter(n => n.type === 'Movie');
+      const movies = chain.filter(n => n.type === 'Movie');
       const nextMovie = movies.length > 1 ? movies[1] : null;
       gameDispatch({
         type: 'USE_HINT',
@@ -120,6 +129,28 @@ function App() {
       });
     }
   };
+
+  // Graduated hint handler. If the prefetch hasn't resolved yet, mark the
+  // hint as pending and let the cached-chain effect below auto-resolve it
+  // when the request lands. The button shows a shimmer state in the meantime.
+  const handleHint = (level) => {
+    if (!cachedHintChain) {
+      uiDispatch({ type: 'SET_PENDING_HINT', level });
+      fetchHintInBackground();
+      return;
+    }
+    resolveHint(level, cachedHintChain);
+  };
+
+  // Auto-resolve a pending hint as soon as the background fetch lands.
+  useEffect(() => {
+    if (pendingHintLevel && cachedHintChain) {
+      const level = pendingHintLevel;
+      uiDispatch({ type: 'CLEAR_PENDING_HINT' });
+      resolveHint(level, cachedHintChain);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pendingHintLevel, cachedHintChain]);
 
   const startGame = () => {
     if (startMovie && targetMovie) {
@@ -162,6 +193,13 @@ function App() {
         <div className="error-message">
           <p>{error}</p>
           <button onClick={() => uiDispatch({ type: 'CLEAR_ERROR' })}>✕</button>
+        </div>
+      )}
+
+      {rateLimitBanner && (
+        <div className="rate-limit-banner" role="status" aria-live="polite">
+          <span className="rate-limit-banner__dot" aria-hidden="true" />
+          <span>{rateLimitBanner}</span>
         </div>
       )}
 
@@ -222,6 +260,7 @@ function App() {
                 difficulty={difficulty}
                 actorLoading={actorLoading}
                 hintLoading={hintLoading}
+                pendingHintLevel={pendingHintLevel}
                 gameDispatch={gameDispatch}
                 handleActorSelect={handleActorSelect}
                 handleFilmographySelect={handleFilmographySelect}

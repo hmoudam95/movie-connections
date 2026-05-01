@@ -83,7 +83,7 @@ async function ensureMovie(session, movieIdStr) {
             );
         }
     } catch (error) {
-        console.error('Error in ensureMovie:', error);
+        if (process.env.DEBUG) console.error('Error in ensureMovie:', error);
         throw error;
     }
 }
@@ -113,18 +113,19 @@ export default async function handler(req, res) {
         return res.status(400).json({ error: 'Invalid movie ID format.' });
     }
 
-    console.log(`🔍 Environment: ${isVercel ? 'Production (Vercel)' : 'Development (Local)'}`);
-    console.log(`🔍 Neo4j URI: ${config.uri}`);
+    if (process.env.DEBUG) {
+        console.log(`Environment: ${isVercel ? 'Production' : 'Development'}`);
+    }
 
     // Phase 1: upsert both endpoints in a WRITE session
     const writeSession = driver.session({ defaultAccessMode: neo4j.session.WRITE });
     try {
-        console.log(`⬆️  Upserting ${fromMovieId} & ${toMovieId}`);
+        if (process.env.DEBUG) console.log(`Upserting ${fromMovieId} & ${toMovieId}`);
         await ensureMovie(writeSession, fromMovieId);
         await ensureMovie(writeSession, toMovieId);
     } catch (err) {
-        console.error('Error upserting:', err);
-        return res.status(500).json({ error: err.message });
+        if (process.env.DEBUG) console.error('Error upserting:', err);
+        return res.status(500).json({ error: 'Failed to load movie data' });
     } finally {
         await writeSession.close();
     }
@@ -132,7 +133,7 @@ export default async function handler(req, res) {
     // Phase 2: shortestPath in a READ session
     const readSession = driver.session({ defaultAccessMode: neo4j.session.READ });
     try {
-        console.log(`🔍  shortestPath(${fromMovieId} → ${toMovieId})`);
+        if (process.env.DEBUG) console.log(`shortestPath(${fromMovieId} -> ${toMovieId})`);
         const result = await readSession.run(
             `
     MATCH (start:Movie {id:$from}), (end:Movie {id:$to})
@@ -147,17 +148,16 @@ export default async function handler(req, res) {
         );
 
         if (result.records.length === 0) {
-            console.log('⚠️  No path found');
             return res.status(404).json({ error: 'No connection found.' });
         }
 
         const chain = result.records[0].get('chain');
-        console.log('✅  Path:', chain.map(n => n.title).join(' → '));
+        if (process.env.DEBUG) console.log('Path:', chain.map(n => n.title).join(' -> '));
         res.json({ chain });
     } catch (err) {
-        console.error('Error finding path:', err);
-        res.status(500).json({ error: err.message });
+        if (process.env.DEBUG) console.error('Error finding path:', err);
+        res.status(500).json({ error: 'Failed to compute shortest path' });
     } finally {
         await readSession.close();
     }
-} 
+}

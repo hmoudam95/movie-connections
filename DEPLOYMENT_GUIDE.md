@@ -2,6 +2,27 @@
 
 This guide will help you deploy your Movie Connections game to work both locally and on Vercel with your 2036-movie Neo4j database.
 
+---
+
+## ⚡ Quick Vercel Checklist
+
+Before pushing to `main`, confirm:
+
+- [ ] **`.env` is gitignored** (verify with `git ls-files | grep .env` — only `.env.example` should appear)
+- [ ] **`vercel.json` exists** at project root (pins framework + function timeout)
+- [ ] **Vercel Dashboard → Project → Settings → Environment Variables** has these set for **Production** *and* **Preview**:
+  - `NEO4J_URI`
+  - `NEO4J_USER`
+  - `NEO4J_PASSWORD`
+  - `TMDB_API_KEY` (server-side, used by `/api/path` and `/api/health`)
+  - `REACT_APP_TMDB_API_KEY` (client-side; CRA bakes it into the build, so it must be set at *build* time)
+- [ ] **`og-image.png`** is present at `public/og-image.png` (1200×630). Replace the auto-generated placeholder with a designed version when ready.
+- [ ] **Health endpoint** responds: open `https://your-app.vercel.app/api/health` after deploy. Should return `{"ok": true, "neo4j": "reachable"}`. The frontend pings this on first paint to warm Neo4j so the first hint click feels instant.
+
+If you ever rotate credentials, update them in Vercel **and** redeploy — `REACT_APP_*` vars are baked into the bundle, so a redeploy is required for client-side keys.
+
+---
+
 ## 📋 Prerequisites
 
 - ✅ Local Neo4j database with 2036 movies (already set up)
