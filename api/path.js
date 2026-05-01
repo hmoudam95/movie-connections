@@ -34,6 +34,24 @@ const driver = neo4j.driver(
 // Helper: upsert Movie & its cast
 async function ensureMovie(session, movieIdStr) {
     try {
+        // Skip the TMDB upsert if the movie already exists in Neo4j with at
+        // least one cast member. This is the case for any movie loaded by
+        // populateDatabase.js, and avoids:
+        //   - TMDB 404s for IDs that were deleted/merged in TMDB after we
+        //     already populated them locally (e.g. movie 102322)
+        //   - Unnecessary TMDB roundtrips on every hint call
+        //   - Unnecessary writes to Aura on every hint call
+        const existing = await session.run(
+            `MATCH (m:Movie {id: $id})
+             OPTIONAL MATCH (a:Actor)-[:ACTED_IN]->(m)
+             RETURN m IS NOT NULL AS exists, count(a) AS castCount`,
+            { id: movieIdStr }
+        );
+        const row = existing.records[0];
+        if (row && row.get('exists') && row.get('castCount').toNumber() > 0) {
+            return;
+        }
+
         if (!process.env.TMDB_API_KEY) {
             const e = new Error('TMDB_API_KEY env var not configured on the server');
             e.code = 'TMDB_KEY_MISSING';
