@@ -21,13 +21,27 @@ export function useHintSystem(gameState, currentMovie, targetMovie, cachedHintCh
         { signal: controller.signal }
       );
       if (controller.signal.aborted) return;
-      const data = await res.json();
-      if (!data.error && data.chain) {
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data.chain) {
         gameDispatch({ type: 'CACHE_HINT', chain: data.chain });
+      } else {
+        // Surface the failure: clear the pending hint so the shimmer stops,
+        // and show a toast-style error so the user knows something went wrong.
+        const reason =
+          res.status === 404
+            ? "We couldn't find a path between those two movies"
+            : "Hints are temporarily unavailable — try again in a moment";
+        uiDispatch({ type: 'CLEAR_PENDING_HINT' });
+        uiDispatch({ type: 'SET_ERROR', message: reason });
+        if (data && data.detail) {
+          console.error('[hint]', data.code || '', data.detail);
+        }
       }
     } catch (err) {
       if (!controller.signal.aborted) {
-        console.log('Background hint fetch failed (silent):', err.message);
+        uiDispatch({ type: 'CLEAR_PENDING_HINT' });
+        uiDispatch({ type: 'SET_ERROR', message: 'Hints are temporarily unavailable — try again in a moment' });
+        console.error('[hint]', err.message);
       }
     } finally {
       if (!controller.signal.aborted) {
@@ -35,7 +49,7 @@ export function useHintSystem(gameState, currentMovie, targetMovie, cachedHintCh
         setBackgroundFetchController(null);
       }
     }
-  }, [currentMovie?.id, targetMovie?.id, cachedHintChain, backgroundHintFetching, gameDispatch]);
+  }, [currentMovie?.id, targetMovie?.id, cachedHintChain, backgroundHintFetching, gameDispatch, uiDispatch]);
 
   // Start background fetch 2s after game begins
   useEffect(() => {

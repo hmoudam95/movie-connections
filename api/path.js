@@ -34,12 +34,24 @@ const driver = neo4j.driver(
 // Helper: upsert Movie & its cast
 async function ensureMovie(session, movieIdStr) {
     try {
+        if (!process.env.TMDB_API_KEY) {
+            const e = new Error('TMDB_API_KEY env var not configured on the server');
+            e.code = 'TMDB_KEY_MISSING';
+            throw e;
+        }
+
         // 1) Fetch from TMDB
         const resp = await fetch(
             `https://api.themoviedb.org/3/movie/${movieIdStr}` +
             `?api_key=${process.env.TMDB_API_KEY}&append_to_response=credits`
         );
-        if (!resp.ok) throw new Error(`TMDB fetch failed: ${resp.status}`);
+        if (!resp.ok) {
+            const body = await resp.text().catch(() => '');
+            const e = new Error(`TMDB fetch failed: ${resp.status} ${resp.statusText} ${body.slice(0, 200)}`);
+            e.code = 'TMDB_FETCH_FAILED';
+            e.status = resp.status;
+            throw e;
+        }
         const { id, title, poster_path, release_date, credits } = await resp.json();
 
         // 2) MERGE the Movie node & set its props
@@ -83,7 +95,9 @@ async function ensureMovie(session, movieIdStr) {
             );
         }
     } catch (error) {
-        if (process.env.DEBUG) console.error('Error in ensureMovie:', error);
+        // Always log errors so they're visible in Vercel function logs.
+        // Only verbose info-level logs are gated on DEBUG.
+        console.error('[ensureMovie]', movieIdStr, error.code || '', error.message);
         throw error;
     }
 }
@@ -124,8 +138,13 @@ export default async function handler(req, res) {
         await ensureMovie(writeSession, fromMovieId);
         await ensureMovie(writeSession, toMovieId);
     } catch (err) {
-        if (process.env.DEBUG) console.error('Error upserting:', err);
-        return res.status(500).json({ error: 'Failed to load movie data' });
+        console.error('[upsert]', err.code || '', err.message);
+        return res.status(500).json({
+            error: 'Failed to load movie data',
+            phase: 'upsert',
+            code: err.code || 'UNKNOWN',
+            detail: err.message,
+        });
     } finally {
         await writeSession.close();
     }
@@ -155,8 +174,13 @@ export default async function handler(req, res) {
         if (process.env.DEBUG) console.log('Path:', chain.map(n => n.title).join(' -> '));
         res.json({ chain });
     } catch (err) {
-        if (process.env.DEBUG) console.error('Error finding path:', err);
-        res.status(500).json({ error: 'Failed to compute shortest path' });
+        console.error('[shortestPath]', err.code || '', err.message);
+        res.status(500).json({
+            error: 'Failed to compute shortest path',
+            phase: 'shortestPath',
+            code: err.code || 'UNKNOWN',
+            detail: err.message,
+        });
     } finally {
         await readSession.close();
     }
