@@ -741,9 +741,12 @@
     *,
     *::before,
     *::after {
+        /* Reduced motion = fewer/gentler, not zero. Stop looping keyframes
+           (confetti, pulses, shimmers) but keep opacity/color transitions
+           that aid comprehension, per Emil Kowalski's guidance. */
         animation-duration: 0.01ms !important;
         animation-iteration-count: 1 !important;
-        transition-duration: 0.01ms !important;
+        animation-delay: 0ms !important;
     }
 }
 

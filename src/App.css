@@ -399,6 +399,11 @@
   --shadow-xl: 0 24px 48px -12px rgba(20, 20, 25, 0.20);
   --shadow-glow: 0 0 0 3px rgba(20, 20, 25, 0.06);
 
+  /* Easing — Emil Kowalski curves (stronger than the weak CSS defaults) */
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+  --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
+
   /* Typography */
   --font-heading: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
   --font-body: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
@@ -574,7 +579,7 @@ button {
   border: none;
   border-radius: var(--radius-lg);
   cursor: pointer;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: transform 160ms var(--ease-out), box-shadow 200ms var(--ease-out), background-color 200ms var(--ease-out), border-color 200ms var(--ease-out);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -598,7 +603,7 @@ button::after {
   width: 0;
   height: 0;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.3);
+  background: rgba(20, 20, 25, 0.12);
   transform: translate(-50%, -50%);
   transition: width 0.3s, height 0.3s;
   pointer-events: none;
@@ -626,7 +631,7 @@ button:not(.button-secondary):not(.button-ghost):not(.random-movie-btn):not(.dif
 }
 
 button:not(.button-secondary):not(.button-ghost):not(.random-movie-btn):not(.difficulty-btn):active {
-  transform: translateY(0);
+  transform: scale(0.97);
 }
 
 /* Secondary Button */

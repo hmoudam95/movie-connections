@@ -1,5 +1,5 @@
 import React, { useEffect, useReducer } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, MotionConfig } from 'framer-motion';
 import { gameReducer, initialGameState } from './state/gameReducer';
 import { uiReducer, initialUIState } from './state/uiReducer';
 import { useMovieAPI } from './hooks/useMovieAPI';
@@ -167,6 +167,7 @@ function App() {
   };
 
   return (
+    <MotionConfig reducedMotion="user">
     <motion.div className="app">
       {error && (
         <div className="error-message">
@@ -285,6 +286,7 @@ function App() {
         </AnimatePresence>
       )}
     </motion.div>
+    </MotionConfig>
   );
 }
 
