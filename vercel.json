@@ -8,12 +8,20 @@
     "api/*.js": {
       "maxDuration": 10,
       "memory": 512
+    },
+    "api/cron/populate.js": {
+      "maxDuration": 60,
+      "memory": 1024
     }
   },
   "crons": [
     {
       "path": "/api/health",
       "schedule": "17 4 * * *"
+    },
+    {
+      "path": "/api/cron/populate",
+      "schedule": "0 3 * * *"
     }
   ],
   "headers": [

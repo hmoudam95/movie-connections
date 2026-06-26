@@ -3,7 +3,7 @@
 /* Background hint ready button styling */
 .hint-button.hint-ready {
   background: var(--gradient-gold);
-  color: #1a1000;
+  color: #f4f4f5;
   border-color: var(--accent-gold);
   box-shadow: 0 4px 12px var(--accent-gold-glow);
   animation: pulse-ready 2s infinite;
@@ -20,7 +20,7 @@
     box-shadow: 0 4px 12px var(--accent-gold-glow);
   }
   50% {
-    box-shadow: 0 4px 16px rgba(232, 180, 74, 0.4);
+    box-shadow: 0 4px 16px rgba(20, 20, 25, 0.4);
   }
 }
 
@@ -50,8 +50,8 @@
   width: 14px;
   height: 14px;
   border-radius: 3px;
-  background: rgba(52, 211, 153, 0.3);
-  border: 1px solid rgba(52, 211, 153, 0.5);
+  background: rgba(20, 20, 25, 0.3);
+  border: 1px solid rgba(20, 20, 25, 0.5);
   transition: background 0.3s ease, border-color 0.3s ease, transform 0.3s ease;
 }
 
@@ -61,8 +61,8 @@
 }
 
 .move-dot-saved {
-  background: rgba(52, 211, 153, 0.6);
-  border-color: rgba(52, 211, 153, 0.8);
+  background: rgba(20, 20, 25, 0.6);
+  border-color: rgba(20, 20, 25, 0.8);
 }
 
 @keyframes dot-warning-shake {
@@ -138,15 +138,15 @@
 .difficulty-active {
   background: var(--gradient-gold) !important;
   border-color: var(--accent-gold) !important;
-  box-shadow: 0 0 20px rgba(232, 180, 74, 0.3);
+  box-shadow: 0 0 20px rgba(20, 20, 25, 0.3);
 }
 
 .difficulty-active .difficulty-label {
-  color: #1a1000;
+  color: #f4f4f5;
 }
 
 .difficulty-active .difficulty-moves {
-  color: rgba(26, 16, 0, 0.7);
+  color: rgba(244, 244, 245, 0.72);
 }
 
 .difficulty-label {
@@ -273,7 +273,7 @@
 /* ===== OPTIMAL PATH REVEAL ===== */
 .optimal-path-reveal {
   background: var(--surface);
-  border: 1px solid rgba(52, 211, 153, 0.3);
+  border: 1px solid rgba(20, 20, 25, 0.3);
   border-radius: var(--radius-2xl);
   padding: var(--space-xl);
   margin-bottom: var(--space-2xl);
@@ -336,68 +336,68 @@
 :root {
   /* ===== Cinema Dark Design System ===== */
 
-  /* Backgrounds */
-  --bg-deep: #08080c;
-  --bg-primary: #0f0f17;
-  --bg-elevated: #171723;
-  --bg-surface: #1e1e2e;
+  /* Backgrounds — Mono (ink on neutral off-white) */
+  --bg-deep: #ececed;
+  --bg-primary: #f4f4f5;
+  --bg-elevated: #ffffff;
+  --bg-surface: #ffffff;
 
   /* Aliases for backward compatibility */
   --bg-secondary: var(--bg-elevated);
   --bg-tertiary: var(--bg-surface);
-  --surface: rgba(255, 255, 255, 0.03);
-  --surface-hover: rgba(255, 255, 255, 0.06);
+  --surface: rgba(20, 20, 25, 0.035);
+  --surface-hover: rgba(20, 20, 25, 0.06);
 
-  /* Text */
-  --text-primary: #f0f0f5;
-  --text-secondary: #a0a0b4;
-  --text-muted: #6b6b80;
+  /* Text — dark ink */
+  --text-primary: #16161a;
+  --text-secondary: #55555f;
+  --text-muted: #8a8a93;
 
-  /* Cinema Gold Accent */
-  --accent-gold: #e8b44a;
-  --accent-gold-dim: #b8872e;
-  --accent-gold-glow: rgba(232, 180, 74, 0.2);
+  /* Mono Accent (charcoal — the only "color") */
+  --accent-gold: #1c1c22;
+  --accent-gold-dim: #3a3a42;
+  --accent-gold-glow: rgba(20, 20, 25, 0.10);
 
-  /* Indigo Brand */
-  --accent-indigo: #818cf8;
-  --accent-indigo-dim: #6366f1;
+  /* Mono brand (was indigo) */
+  --accent-indigo: #2a2a30;
+  --accent-indigo-dim: #1c1c22;
 
-  /* Semantic Colors */
-  --color-success: #34d399;
-  --color-error: #f87171;
-  --color-warning: #fbbf24;
-  --color-info: #60a5fa;
+  /* Semantic Colors — muted, functional only */
+  --color-success: #2e7d52;
+  --color-error: #c0392b;
+  --color-warning: #b07a16;
+  --color-info: #3a6ea5;
 
   /* Accent aliases for backward compatibility */
   --accent-primary: var(--accent-indigo-dim);
   --accent-secondary: var(--accent-indigo);
-  --accent-tertiary: #06b6d4;
+  --accent-tertiary: #2a2a30;
   --accent-success: var(--color-success);
   --accent-warning: var(--color-warning);
   --accent-error: var(--color-error);
 
-  /* Gradients */
-  --gradient-gold: linear-gradient(135deg, #e8b44a, #d4943a);
-  --gradient-victory: linear-gradient(135deg, #fbbf24, #e8b44a);
-  --gradient-defeat: linear-gradient(135deg, #1e1e2e, #2a1a1a);
-  --gradient-card: linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0));
+  /* Gradients — flattened to mono ink */
+  --gradient-gold: linear-gradient(135deg, #232329, #16161a);
+  --gradient-victory: linear-gradient(135deg, #2a2a30, #16161a);
+  --gradient-defeat: linear-gradient(135deg, #e6e6e8, #d8d8da);
+  --gradient-card: linear-gradient(180deg, rgba(20,20,25,0.02), rgba(20,20,25,0));
   --gradient-primary: var(--gradient-gold);
-  --gradient-secondary: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-  --gradient-success: linear-gradient(135deg, #34d399, #06b6d4);
+  --gradient-secondary: linear-gradient(135deg, #3a3a42, #1c1c22);
+  --gradient-success: linear-gradient(135deg, #2e7d52, #246343);
 
-  /* Borders */
-  --border-subtle: rgba(255, 255, 255, 0.06);
-  --border-interactive: rgba(255, 255, 255, 0.12);
-  --border-focus: #818cf8;
+  /* Borders — dark hairlines on light */
+  --border-subtle: rgba(20, 20, 25, 0.10);
+  --border-interactive: rgba(20, 20, 25, 0.18);
+  --border-focus: #16161a;
   --border: var(--border-subtle);
   --border-hover: var(--border-interactive);
 
-  /* Shadows */
-  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
-  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.4);
-  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.5);
-  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.6);
-  --shadow-glow: 0 0 20px var(--accent-gold-glow);
+  /* Shadows — soft, light-theme */
+  --shadow-sm: 0 1px 2px 0 rgba(20, 20, 25, 0.06);
+  --shadow-md: 0 4px 12px -4px rgba(20, 20, 25, 0.12);
+  --shadow-lg: 0 12px 28px -8px rgba(20, 20, 25, 0.16);
+  --shadow-xl: 0 24px 48px -12px rgba(20, 20, 25, 0.20);
+  --shadow-glow: 0 0 0 3px rgba(20, 20, 25, 0.06);
 
   /* Typography */
   --font-heading: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
@@ -459,9 +459,7 @@ body::before {
   width: 100%;
   height: 100%;
   background:
-    radial-gradient(circle at 20% 50%, rgba(232, 180, 74, 0.06) 0%, transparent 50%),
-    radial-gradient(circle at 80% 20%, rgba(129, 140, 248, 0.06) 0%, transparent 50%),
-    radial-gradient(circle at 40% 80%, rgba(52, 211, 153, 0.03) 0%, transparent 50%);
+    radial-gradient(circle at 50% -5%, rgba(20, 20, 25, 0.03) 0%, transparent 55%);
   pointer-events: none;
   z-index: -1;
 }
@@ -613,21 +611,21 @@ button:active::after {
 }
 
 /* Primary Button */
-button:not(.button-secondary):not(.button-ghost):not(.random-movie-btn) {
+button:not(.button-secondary):not(.button-ghost):not(.random-movie-btn):not(.difficulty-btn) {
   background: var(--gradient-gold);
-  color: #1a1000;
+  color: #f4f4f5;
   padding: var(--space-sm) var(--space-lg);
   font-size: var(--type-body);
   font-weight: 600;
   box-shadow: var(--shadow-md);
 }
 
-button:not(.button-secondary):not(.button-ghost):not(.random-movie-btn):hover {
+button:not(.button-secondary):not(.button-ghost):not(.random-movie-btn):not(.difficulty-btn):hover {
   transform: translateY(-2px);
   box-shadow: var(--shadow-lg), var(--shadow-glow);
 }
 
-button:not(.button-secondary):not(.button-ghost):not(.random-movie-btn):active {
+button:not(.button-secondary):not(.button-ghost):not(.random-movie-btn):not(.difficulty-btn):active {
   transform: translateY(0);
 }
 
@@ -1268,7 +1266,7 @@ input[type="text"]::placeholder {
   height: 3px;
   background: linear-gradient(90deg, var(--accent-primary), #fb923c);
   z-index: 1;
-  box-shadow: 0 0 10px rgba(99, 102, 241, 0.5);
+  box-shadow: 0 0 10px rgba(20, 20, 25, 0.5);
 }
 
 .connection-label {
@@ -1527,14 +1525,14 @@ input[type="text"]::placeholder {
   width: 14px;
   height: 14px;
   border-radius: 4px;
-  background: rgba(52, 211, 153, 0.3);
-  border: 1px solid rgba(52, 211, 153, 0.5);
-  transition: all 0.3s ease;
+  background: rgba(20, 20, 25, 0.82);
+  border: 1px solid rgba(20, 20, 25, 0.85);
+  transition: background-color 0.2s ease, border-color 0.2s ease, transform 0.16s ease;
 }
 
 .game-header-dot--used {
-  background: rgba(248, 113, 113, 0.7);
-  border-color: rgba(248, 113, 113, 0.8);
+  background: transparent;
+  border-color: rgba(20, 20, 25, 0.2);
 }
 
 /* ===== PHASE 3: CHAIN RAIL ===== */
@@ -1738,8 +1736,8 @@ input[type="text"]::placeholder {
 }
 
 .hint-chip--level3 {
-  background: rgba(129, 140, 248, 0.1);
-  border: 1px solid rgba(129, 140, 248, 0.3);
+  background: rgba(20, 20, 25, 0.1);
+  border: 1px solid rgba(20, 20, 25, 0.3);
   padding: 14px 16px;
 }
 
@@ -3103,7 +3101,7 @@ input[type="text"]::placeholder {
   .filmography-item {
     min-height: 44px;
     cursor: pointer;
-    -webkit-tap-highlight-color: rgba(99, 102, 241, 0.1);
+    -webkit-tap-highlight-color: rgba(20, 20, 25, 0.1);
   }
 }
 

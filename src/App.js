@@ -2,7 +2,6 @@ import React, { useEffect, useReducer } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { gameReducer, initialGameState } from './state/gameReducer';
 import { uiReducer, initialUIState } from './state/uiReducer';
-import { useMobile } from './hooks/useMobile';
 import { useMovieAPI } from './hooks/useMovieAPI';
 import { useHintSystem } from './hooks/useHintSystem';
 import SetupScreen from './screens/SetupScreen';
@@ -16,7 +15,6 @@ function App() {
   const [game, gameDispatch] = useReducer(gameReducer, initialGameState);
   const [ui, uiDispatch] = useReducer(uiReducer, initialUIState);
 
-  const isMobile = useMobile();
   const { fetchMovieDetails, fetchActorFilmography, getRandomMovie } = useMovieAPI(gameDispatch, uiDispatch);
 
   const {
@@ -168,27 +166,8 @@ function App() {
     }, 100);
   };
 
-  // Swipe gesture handlers
-  const handleSwipeLeft = () => {
-    if (gameState === 'setup') startGame();
-  };
-
-  const handleSwipeRight = () => {
-    if (gameState === 'playing' || gameState === 'complete' || gameState === 'failed') resetGame();
-  };
-
   return (
-    <motion.div
-      className="app"
-      drag={isMobile ? "x" : false}
-      dragConstraints={{ left: 0, right: 0 }}
-      onDragEnd={(event, info) => {
-        if (Math.abs(info.offset.x) > 100) {
-          if (info.offset.x > 0) handleSwipeRight();
-          else handleSwipeLeft();
-        }
-      }}
-    >
+    <motion.div className="app">
       {error && (
         <div className="error-message">
           <p>{error}</p>
