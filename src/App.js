@@ -1,4 +1,4 @@
-import React, { useEffect, useReducer } from 'react';
+import React, { useEffect, useReducer, useState } from 'react';
 import { motion, AnimatePresence, MotionConfig } from 'framer-motion';
 import { gameReducer, initialGameState } from './state/gameReducer';
 import { uiReducer, initialUIState } from './state/uiReducer';
@@ -9,20 +9,25 @@ import GameBoard from './screens/GameBoard';
 import VictoryScreen from './screens/VictoryScreen';
 import GameOverScreen from './screens/GameOverScreen';
 import CastOverlay from './components/CastOverlay';
+import { getDailyStats, recordDailyWin } from './utils/dailyStats';
 import './App.css';
 
 function App() {
   const [game, gameDispatch] = useReducer(gameReducer, initialGameState);
   const [ui, uiDispatch] = useReducer(uiReducer, initialUIState);
 
-  const { fetchMovieDetails, fetchActorFilmography, getRandomMovie } = useMovieAPI(gameDispatch, uiDispatch);
+  const { fetchMovieDetails, fetchActorFilmography, getRandomMovie, loadDailyPuzzle, setupDailyGame } = useMovieAPI(gameDispatch, uiDispatch);
 
   const {
     phase: gameState, startMovie, targetMovie, currentMovie,
     selectedActor, chain: gameChain, cast, filmography,
     targetMovieCast, showTargetCast, cachedHintChain,
     movesRemaining, movesUsed, hintLevel, hintsUsed, difficulty,
+    mode, dailyNumber,
   } = game;
+
+  const [dailyPreview, setDailyPreview] = useState(null);
+  const [dailyStats, setDailyStats] = useState(() => getDailyStats());
   const {
     loading: isLoading, randomLoading, actorLoading,
     hintLoading, targetCastLoading, error, randomError,
@@ -50,6 +55,21 @@ function App() {
     });
     return () => cancel(handle);
   }, []);
+
+  // Load today's Daily puzzle preview for the setup card.
+  useEffect(() => {
+    let alive = true;
+    loadDailyPuzzle().then((d) => { if (alive) setDailyPreview(d); }).catch(() => {});
+    return () => { alive = false; };
+  }, [loadDailyPuzzle]);
+
+  // Record a daily win once (streak/stats) when a daily is completed.
+  useEffect(() => {
+    if (gameState === 'complete' && mode === 'daily' && dailyNumber != null) {
+      setDailyStats(recordDailyWin(dailyNumber, movesUsed));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [gameState, mode, dailyNumber]);
 
   const handleActorSelect = async (actor) => {
     gameDispatch({ type: 'SELECT_ACTOR', actor });
@@ -158,6 +178,16 @@ function App() {
     }
   };
 
+  const startDaily = async () => {
+    const daily = dailyPreview || await loadDailyPuzzle().catch(() => null);
+    if (!daily) {
+      uiDispatch({ type: 'SET_ERROR', message: "Couldn't load today's daily — try free play" });
+      return;
+    }
+    const ok = await setupDailyGame(daily);
+    if (ok) setTimeout(() => gameDispatch({ type: 'START_GAME' }), 100);
+  };
+
   const resetGame = () => {
     cancelHintFetch();
     setTimeout(() => {
@@ -214,6 +244,9 @@ function App() {
                 startGame={startGame}
                 difficulty={difficulty}
                 gameDispatch={gameDispatch}
+                dailyPreview={dailyPreview}
+                dailyStats={dailyStats}
+                startDaily={startDaily}
               />
             </motion.div>
           )}

@@ -28,6 +28,11 @@ export const initialGameState = {
   cachedHintChain: null,  // background-fetched hint (not yet shown)
   hintLevel: 0,           // 0 = no hints used, 1/2/3 = hint tiers
   hintsUsed: [],          // track which hints were revealed
+
+  // Daily mode
+  mode: 'free',           // 'free' | 'daily'
+  dailyNumber: null,      // today's puzzle number when mode === 'daily'
+  dailyPar: null,         // optimal moves for the daily, from /api/daily
 };
 
 export function gameReducer(state, action) {
@@ -52,7 +57,16 @@ export function gameReducer(state, action) {
         currentMovie: details,
         cast: sortedCast,
         chain: [{ movie: details, actor: null }],
+        // Setting a start movie via free play clears any daily context;
+        // the daily flow dispatches SET_DAILY_META afterwards to re-mark it.
+        mode: 'free',
+        dailyNumber: null,
+        dailyPar: null,
       };
+    }
+
+    case 'SET_DAILY_META': {
+      return { ...state, mode: 'daily', dailyNumber: action.number, dailyPar: action.par };
     }
 
     case 'SET_TARGET_MOVIE': {

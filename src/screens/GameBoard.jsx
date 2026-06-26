@@ -7,7 +7,6 @@ import { POSTER_BASE_URL } from '../utils/constants';
 import { DIFFICULTY_MOVES } from '../state/gameReducer';
 
 const springGentle = { type: 'spring', stiffness: 200, damping: 24 };
-const springSnappy = { type: 'spring', stiffness: 400, damping: 25 };
 
 export default function GameBoard({
   currentMovie, targetMovie, gameChain, selectedActor,
@@ -123,7 +122,7 @@ export default function GameBoard({
                         ? { scale: [1, 1.3, 1] }
                         : { scale: 1 }
                     }
-                    transition={springSnappy}
+                    transition={{ duration: 0.3, ease: [0.23, 1, 0.32, 1] }}
                   />
                 ))}
               </div>

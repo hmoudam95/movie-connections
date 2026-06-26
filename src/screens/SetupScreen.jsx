@@ -5,14 +5,14 @@ import ErrorState from '../components/ErrorState';
 import { getDynamicFontSize, POSTER_BASE_URL } from '../utils/constants';
 import { DIFFICULTY_MOVES } from '../state/gameReducer';
 
-const springSnappy = { type: 'spring', stiffness: 400, damping: 25 };
-
 export default function SetupScreen({
   startMovie, targetMovie, randomLoading, randomError,
   getRandomMovie, startGame, difficulty, gameDispatch,
+  dailyPreview, dailyStats, startDaily,
 }) {
   const [spinningStart, setSpinningStart] = useState(false);
   const [spinningTarget, setSpinningTarget] = useState(false);
+  const dailyDone = dailyPreview && dailyStats?.history?.[dailyPreview.puzzleNumber] != null;
 
   const handleRandom = (isStart) => {
     if (isStart) {
@@ -30,6 +30,49 @@ export default function SetupScreen({
       <h1>🎬 Movie Connections</h1>
       <p>Connect movies through actors in the fewest steps possible!</p>
 
+      {/* Daily Connection */}
+      {dailyPreview && (
+        <motion.div
+          className="daily-card"
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.35, ease: [0.23, 1, 0.32, 1] }}
+        >
+          <div className="daily-card-head">
+            <span className="daily-card-kicker">Daily Connection · #{dailyPreview.puzzleNumber}</span>
+            {dailyStats?.streak > 0 && (
+              <span className="daily-card-streak">🔥 {dailyStats.streak} day{dailyStats.streak > 1 ? 's' : ''}</span>
+            )}
+          </div>
+          <div className="daily-card-pair">
+            <div className="daily-card-movie">
+              {dailyPreview.start.poster_path
+                ? <img src={POSTER_BASE_URL + dailyPreview.start.poster_path} alt={dailyPreview.start.title} />
+                : <div className="daily-card-poster-fallback">🎬</div>}
+              <span>{dailyPreview.start.title}</span>
+            </div>
+            <span className="daily-card-arrow">→</span>
+            <div className="daily-card-movie">
+              {dailyPreview.target.poster_path
+                ? <img src={POSTER_BASE_URL + dailyPreview.target.poster_path} alt={dailyPreview.target.title} />
+                : <div className="daily-card-poster-fallback">🎬</div>}
+              <span>{dailyPreview.target.title}</span>
+            </div>
+          </div>
+          {dailyDone ? (
+            <div className="daily-card-done">
+              ✓ Solved today in {dailyStats.history[dailyPreview.puzzleNumber]} move{dailyStats.history[dailyPreview.puzzleNumber] !== 1 ? 's' : ''} — back tomorrow
+            </div>
+          ) : (
+            <motion.button className="daily-play-btn" onClick={startDaily} whileTap={{ scale: 0.97 }}>
+              Play today’s daily{dailyPreview.par != null ? ` · par ${dailyPreview.par}` : ''} →
+            </motion.button>
+          )}
+        </motion.div>
+      )}
+
+      <div className="setup-section-label">or free play</div>
+
       {/* Difficulty selector */}
       <div className="difficulty-selector">
         {Object.entries(DIFFICULTY_MOVES).map(([key, moves]) => (
@@ -39,7 +82,7 @@ export default function SetupScreen({
             onClick={() => gameDispatch({ type: 'SET_DIFFICULTY', difficulty: key })}
             whileTap={{ scale: 0.95 }}
             animate={difficulty === key ? { scale: [1, 1.05, 1] } : { scale: 1 }}
-            transition={springSnappy}
+            transition={{ duration: 0.3, ease: [0.23, 1, 0.32, 1] }}
           >
             <span className="difficulty-label">{key.charAt(0).toUpperCase() + key.slice(1)}</span>
             <span className="difficulty-moves">{moves} moves</span>

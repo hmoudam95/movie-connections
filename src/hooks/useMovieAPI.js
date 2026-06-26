@@ -163,5 +163,33 @@ export function useMovieAPI(gameDispatch, uiDispatch) {
     []
   );
 
-  return { fetchMovieDetails, fetchTargetMovieCast, fetchActorFilmography, getRandomMovie };
+  // Load today's curated Daily puzzle from our serverless endpoint, then set up
+  // the game's start/target movies from it. Returns the daily payload (for the
+  // setup preview) or null on failure.
+  const loadDailyPuzzle = useCallback(async () => {
+    const base = process.env.REACT_APP_API_BASE_URL || '';
+    const res = await fetchWithRetry(`${base}/api/daily`, {}, uiDispatch);
+    if (!res.ok) throw new Error(`Daily HTTP ${res.status}`);
+    const daily = await res.json();
+    // The endpoint returns string ids; TMDB uses numbers. Normalize so the
+    // win-check (details.id === targetMovie.id) matches.
+    return {
+      ...daily,
+      start: { ...daily.start, id: Number(daily.start.id) },
+      target: { ...daily.target, id: Number(daily.target.id) },
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Pull the daily into game state (start details + target cast), then mark it.
+  const setupDailyGame = async (daily) => {
+    const startDetails = await fetchMovieDetails(daily.start.id);
+    if (startDetails) gameDispatch({ type: 'SET_START_MOVIE', movie: daily.start, details: startDetails });
+    const topCast = await fetchTargetMovieCast(daily.target.id);
+    gameDispatch({ type: 'SET_TARGET_MOVIE', movie: daily.target, cast: topCast });
+    gameDispatch({ type: 'SET_DAILY_META', number: daily.puzzleNumber, par: daily.par });
+    return !!startDetails;
+  };
+
+  return { fetchMovieDetails, fetchTargetMovieCast, fetchActorFilmography, getRandomMovie, loadDailyPuzzle, setupDailyGame };
 }
