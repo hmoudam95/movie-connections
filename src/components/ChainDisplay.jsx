@@ -122,14 +122,14 @@ export default function ChainDisplay({ chain, targetMovie, scrollRef }) {
                   className="chain-connector-line"
                   initial={{ scaleX: 0 }}
                   animate={{ scaleX: 1 }}
-                  transition={{ duration: 0.5, ease: 'easeInOut' }}
+                  transition={{ duration: 0.32, ease: [0.77, 0, 0.175, 1] }}
                   style={{ transformOrigin: 'left' }}
                 />
                 <motion.div
                   className="chain-connector-actor"
-                  initial={{ scale: 0, opacity: 0 }}
+                  initial={{ scale: 0.6, opacity: 0 }}
                   animate={{ scale: 1, opacity: 1 }}
-                  transition={{ ...springPop, delay: 0.15 }}
+                  transition={{ ...springPop, delay: 0.12 }}
                 >
                   <ChainActorCircle actor={item.actor} />
                 </motion.div>
@@ -137,7 +137,7 @@ export default function ChainDisplay({ chain, targetMovie, scrollRef }) {
                   className="chain-connector-line"
                   initial={{ scaleX: 0 }}
                   animate={{ scaleX: 1 }}
-                  transition={{ duration: 0.5, ease: 'easeInOut', delay: 0.15 }}
+                  transition={{ duration: 0.32, ease: [0.77, 0, 0.175, 1], delay: 0.12 }}
                   style={{ transformOrigin: 'left' }}
                 />
               </div>

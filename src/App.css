@@ -92,7 +92,7 @@
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: transform 0.2s ease, background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease, color 0.2s ease;
   touch-action: manipulation;
   -webkit-tap-highlight-color: transparent;
 }
@@ -126,7 +126,7 @@
   border: 2px solid var(--border-subtle);
   border-radius: var(--radius-lg);
   cursor: pointer;
-  transition: all 0.25s ease;
+  transition: transform 0.25s ease, background-color 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease, color 0.25s ease;
   touch-action: manipulation;
 }
 
@@ -687,7 +687,7 @@ input[type="text"] {
   color: var(--text-primary);
   font-family: inherit;
   font-size: 0.875rem;
-  transition: all 0.2s ease;
+  transition: transform 0.2s ease, background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease, color 0.2s ease;
 }
 
 input[type="text"]:focus {
@@ -708,7 +708,7 @@ input[type="text"]::placeholder {
   border-radius: var(--radius-xl);
   padding: var(--space-lg);
   backdrop-filter: blur(10px);
-  transition: all 0.3s ease;
+  transition: transform 0.3s ease, background-color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease, opacity 0.3s ease, color 0.3s ease;
 }
 
 .card:hover {
@@ -1146,7 +1146,7 @@ input[type="text"]::placeholder {
   max-width: 320px;
   width: 100%;
   gap: var(--space-md);
-  transition: all 0.3s ease;
+  transition: transform 0.3s ease, background-color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease, opacity 0.3s ease, color 0.3s ease;
 }
 
 .selected-movie:hover {
@@ -1240,7 +1240,7 @@ input[type="text"]::placeholder {
 }
 
 .target-movie {
-  transition: all 0.2s ease;
+  transition: transform 0.2s ease, background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease, color 0.2s ease;
 }
 
 .target-movie:hover {
@@ -1305,7 +1305,7 @@ input[type="text"]::placeholder {
   padding: var(--space-xs);
   border: 3px solid #ea580c;
   box-shadow: var(--shadow-lg);
-  transition: all 0.2s ease;
+  transition: transform 0.2s ease, background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease, color 0.2s ease;
   pointer-events: auto;
 }
 
@@ -1799,7 +1799,7 @@ input[type="text"]::placeholder {
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: transform 0.15s ease, background-color 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease;
   overflow: hidden;
   position: relative;
   height: 160px;
@@ -1985,7 +1985,7 @@ input[type="text"]::placeholder {
   padding: 8px;
   border-radius: var(--radius-md);
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: transform 0.15s ease, background-color 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease;
   touch-action: manipulation;
   -webkit-tap-highlight-color: transparent;
 }
@@ -2295,7 +2295,7 @@ input[type="text"]::placeholder {
   border-radius: var(--radius-lg);
   padding: var(--space-md);
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: transform 0.2s ease, background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease, color 0.2s ease;
   text-align: center;
 }
 
@@ -2339,7 +2339,7 @@ input[type="text"]::placeholder {
   color: var(--text-secondary);
   font-size: 0.875rem;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: transform 0.2s ease, background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease, color 0.2s ease;
 }
 
 .show-all-cast-btn:hover {
@@ -3188,7 +3188,7 @@ input[type="text"]::placeholder {
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.2s ease;
+  transition: transform 0.2s ease, background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease, color 0.2s ease;
   touch-action: manipulation;
   -webkit-tap-highlight-color: transparent;
 }

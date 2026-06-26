@@ -103,7 +103,15 @@ export default function GameBoard({
 
             {/* Center move counter */}
             <div className="game-header-center">
-              <span className="game-header-count">{movesRemaining}</span>
+              <motion.span
+                key={movesRemaining}
+                className="game-header-count"
+                initial={{ scale: 1.25, opacity: 0.6 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ duration: 0.22, ease: [0.23, 1, 0.32, 1] }}
+              >
+                {movesRemaining}
+              </motion.span>
               <span className="game-header-count-label">moves</span>
               <div className="game-header-dots">
                 {moveDots.map((used, i) => (
@@ -115,7 +123,7 @@ export default function GameBoard({
                         ? { scale: [1, 1.3, 1] }
                         : { scale: 1 }
                     }
-                    transition={{ duration: 0.3, ...springSnappy }}
+                    transition={springSnappy}
                   />
                 ))}
               </div>
