@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import ChainDisplay from '../components/ChainDisplay';
 import { DIFFICULTY_MOVES } from '../state/gameReducer';
 
-const CONFETTI_COLORS = ['#e8b44a', '#818cf8', '#34d399', '#f0f0f5'];
+const CONFETTI_COLORS = ['#16161a', '#3a3a42', '#8a8a93', '#c4c4cb'];
 
 function getAchievement(steps, movesUsed, difficulty) {
   const totalMoves = DIFFICULTY_MOVES[difficulty];

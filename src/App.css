@@ -2429,6 +2429,7 @@ input[type="text"]::placeholder {
   white-space: nowrap;
   pointer-events: none;
   user-select: none;
+  color: rgba(20, 20, 25, 0.05);
 }
 
 .ticket-stats {
