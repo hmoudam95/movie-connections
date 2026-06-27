@@ -158,10 +158,25 @@ function Header({ currentMovie, targetMovie, shared }) {
   );
 }
 
-// Dynamic strings from the (moving) header anchor to every candidate's live position.
-function Connectors({ bases, shared }) {
+const DEFAULT_GLOW = [0.37, 0.89, 0.6];
+
+// Compass color from a candidate's distance-to-target vs. the current film's.
+// closer = green, lateral = amber, farther = red, unknown/dead-end = grey.
+function routeColor(dist, dCur) {
+  if (dist == null || dist < 0) return [0.46, 0.46, 0.52];   // unknown / dead end
+  if (dist === 0) return [0.3, 1.0, 0.55];                   // this IS the target
+  if (dCur == null || dCur < 0) return [0.4, 0.9, 0.62];     // no reference yet
+  if (dist < dCur) return [0.4, 0.9, 0.62];                  // closer → green
+  if (dist === dCur) return [0.93, 0.8, 0.34];               // lateral → amber
+  return [0.94, 0.4, 0.4];                                   // farther → red
+}
+
+// Dynamic strings from the (moving) header anchor to every candidate, each line
+// colored by its route quality (green→red), dimmer at the anchor end.
+function Connectors({ bases, shared, routeColors }) {
   const ref = useRef();
   const positions = useMemo(() => new Float32Array(bases.length * 6), [bases.length]);
+  const colors = useMemo(() => new Float32Array(bases.length * 6), [bases.length]);
   useFrame(() => {
     const a = shared.anchor;
     for (let i = 0; i < bases.length; i++) {
@@ -171,16 +186,22 @@ function Connectors({ bases, shared }) {
       positions[i * 6 + 3] = bases[i][0] + shared.scrollX;
       positions[i * 6 + 4] = bases[i][1] + shared.scrollY;
       positions[i * 6 + 5] = bases[i][2];
+      const c = (routeColors && routeColors[i]) || DEFAULT_GLOW;
+      colors[i * 6 + 0] = c[0] * 0.4; colors[i * 6 + 1] = c[1] * 0.4; colors[i * 6 + 2] = c[2] * 0.4;
+      colors[i * 6 + 3] = c[0]; colors[i * 6 + 4] = c[1]; colors[i * 6 + 5] = c[2];
     }
-    if (ref.current) ref.current.geometry.attributes.position.needsUpdate = true;
+    if (ref.current) {
+      ref.current.geometry.attributes.position.needsUpdate = true;
+      ref.current.geometry.attributes.color.needsUpdate = true;
+    }
   });
   return (
     <lineSegments ref={ref} frustumCulled={false}>
       <bufferGeometry>
         <bufferAttribute attach="attributes-position" array={positions} itemSize={3} count={bases.length * 2} />
+        <bufferAttribute attach="attributes-color" array={colors} itemSize={3} count={bases.length * 2} />
       </bufferGeometry>
-      {/* glow placeholder — per-string green→red route color lands with the distance engine */}
-      <lineBasicMaterial color="#5fe39a" transparent opacity={0.5} blending={THREE.AdditiveBlending} depthWrite={false} />
+      <lineBasicMaterial vertexColors transparent opacity={0.6} blending={THREE.AdditiveBlending} depthWrite={false} />
     </lineSegments>
   );
 }
@@ -203,7 +224,7 @@ function ScrollColumn({ items, kind, bases, onPickActor, onPickFilm, pan, shared
   );
 }
 
-function Scene({ currentMovie, targetMovie, items, kind, bases, onPickActor, onPickFilm, pan, shared }) {
+function Scene({ currentMovie, targetMovie, items, kind, bases, onPickActor, onPickFilm, pan, shared, routeColors }) {
   return (
     <>
       <color attach="background" args={['#05060a']} />
@@ -211,7 +232,7 @@ function Scene({ currentMovie, targetMovie, items, kind, bases, onPickActor, onP
       <Stars radius={90} depth={50} count={1600} factor={3} saturation={0} fade speed={0.2} />
       <Header currentMovie={currentMovie} targetMovie={targetMovie} shared={shared} />
       {/* strings only after a selection (films view) — keeps browsing clean */}
-      {kind === 'films' && <Connectors bases={bases} shared={shared} />}
+      {kind === 'films' && <Connectors bases={bases} shared={shared} routeColors={routeColors} />}
       <ScrollColumn items={items} kind={kind} bases={bases} onPickActor={onPickActor} onPickFilm={onPickFilm} pan={pan} shared={shared} />
     </>
   );
@@ -231,8 +252,32 @@ export default function SpaceBoard({
   const pan = useRef({ tx: 0, ty: 0 }).current;
   const shared = useRef({ anchor: new THREE.Vector3(0, 0.45, 0.4), scrollX: 0, scrollY: 0 }).current;
   const scrollMax = Math.max(0, (items.length - 1) * SPACING_Y - 1.4);
+  const [routeColors, setRouteColors] = useState(null);
 
   useEffect(() => { pan.tx = 0; pan.ty = 0; }, [currentMovie?.id, selectedActor?.id, showFilms, pan]);
+
+  // Compass: when viewing an actor's films, fetch each film's distance-to-target
+  // and color the route strings (green closer → red farther → grey dead end).
+  useEffect(() => {
+    if (kind !== 'films' || !items.length || !targetMovie?.id || !currentMovie?.id) {
+      setRouteColors(null);
+      return;
+    }
+    let alive = true;
+    const filmIds = items.slice(0, 36).map((f) => f.id);
+    const base = process.env.REACT_APP_API_BASE_URL || '';
+    const url = `${base}/api/distances?toMovieId=${targetMovie.id}&ids=${[currentMovie.id, ...filmIds].join(',')}`;
+    fetch(url)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (!alive || !data || !data.dist) return;
+        const dCur = data.dist[String(currentMovie.id)];
+        setRouteColors(items.map((f) => routeColor(data.dist[String(f.id)], dCur)));
+      })
+      .catch(() => {});
+    return () => { alive = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [kind, selectedActor?.id, currentMovie?.id, targetMovie?.id]);
 
   const bind = useDrag(({ first, movement: [mx, my], memo }) => {
     if (first) memo = { x: pan.tx, y: pan.ty };
@@ -264,6 +309,7 @@ export default function SpaceBoard({
             onPickFilm={handleFilmographySelect}
             pan={pan}
             shared={shared}
+            routeColors={routeColors}
           />
         </Suspense>
       </Canvas>
