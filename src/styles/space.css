@@ -105,6 +105,36 @@
   transform: translate(-50%, -50%);
 }
 
+.space-rails {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+}
+.space-rails::before,
+.space-rails::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 9%;
+}
+.space-rails::before {
+  left: 0;
+  background: linear-gradient(to right, rgba(5, 6, 10, 0.92), rgba(5, 6, 10, 0));
+  border-right: 1px solid rgba(255, 255, 255, 0.07);
+}
+.space-rails::after {
+  right: 0;
+  background: linear-gradient(to left, rgba(5, 6, 10, 0.92), rgba(5, 6, 10, 0));
+  border-left: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.space-bubble-label--right {
+  text-align: left !important;
+  max-width: 130px;
+}
+
 .space-bubble-label {
   font-family: var(--font-body), system-ui, sans-serif;
   font-size: 11px;

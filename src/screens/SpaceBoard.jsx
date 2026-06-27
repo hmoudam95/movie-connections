@@ -6,17 +6,19 @@ import { useDrag } from '@use-gesture/react';
 import '../styles/space.css';
 
 // Space Mode — the flagship 3D "constellation" board.
-// No idle float / auto-camera: the PLAYER controls movement. Drag pans the world
-// like walking a character across a map (things shift the opposite way, new ones
-// come into view); tap a node to travel to it. The whole cast is laid out — drag
-// to explore it. Falls back to Classic without WebGL.
-// NOTE: travel-on-select animation + dynamic-gradient compass land in the next pass.
+// The current film and target stay ANCHORED. The candidate list runs VERTICALLY
+// (you scroll down through it). Horizontal movement is tiny (≈ half a face) — a
+// parallax hint of a bigger walk. Drag to move, tap a node to travel. Side
+// borders frame the lane. Falls back to Classic without WebGL.
 
 const POSTER_W = 'https://image.tmdb.org/t/p/w342';
 const PROFILE_W = 'https://image.tmdb.org/t/p/w185';
-const SPACING = 1.35;     // world units between candidates in the strip
-const PAN_FACTOR = 0.016; // screen px -> world units while dragging
-const PAN_Y_LIMIT = 1.6;
+const SPACING_Y = 1.25;      // vertical gap between candidates
+const HEAD_R = 0.36;
+const PAN_X_LIMIT = HEAD_R;  // "half a face" of horizontal sway
+const PAN_X_FACTOR = 0.005;  // very small horizontal response
+const PAN_Y_FACTOR = 0.013;  // vertical scroll response
+const COL_TOP = -0.2;        // y of the first candidate (just below current film)
 
 function hasWebGL() {
   try {
@@ -27,8 +29,7 @@ function hasWebGL() {
   }
 }
 
-// Rounded-rectangle movie poster.
-function MovieCard({ url, scale = [1.6, 2.4], opacity = 1 }) {
+function MovieCard({ url, scale = [1.3, 1.95], opacity = 1 }) {
   if (!url) {
     return (
       <mesh>
@@ -40,8 +41,8 @@ function MovieCard({ url, scale = [1.6, 2.4], opacity = 1 }) {
   return <Image url={url} scale={scale} radius={0.1} transparent opacity={opacity} />;
 }
 
-// Round, face-centered headshot: square-crop from the top of the portrait + circle mask.
-function RoundHead({ url, radius = 0.36 }) {
+// Round, face-centered headshot.
+function RoundHead({ url, radius = HEAD_R }) {
   const tex = useTexture(url);
   useMemo(() => {
     const img = tex.image;
@@ -66,7 +67,7 @@ function RoundHead({ url, radius = 0.36 }) {
   );
 }
 
-function InitialsHead({ label, radius = 0.36 }) {
+function InitialsHead({ label, radius = HEAD_R }) {
   return (
     <group>
       <mesh>
@@ -87,7 +88,6 @@ function Bubble({ item, kind, position, onPick }) {
     ? (item.profile_path ? PROFILE_W + item.profile_path : null)
     : (item.poster_path ? POSTER_W + item.poster_path : null);
   const label = isActor ? item.name : item.title;
-  const labelY = isActor ? -0.58 : -0.8;
 
   return (
     <group position={position}>
@@ -101,10 +101,11 @@ function Bubble({ item, kind, position, onPick }) {
           {isActor ? (
             url ? <RoundHead url={url} /> : <InitialsHead label={label} />
           ) : (
-            <MovieCard url={url} scale={[0.74, 1.11]} />
+            <MovieCard url={url} scale={[0.62, 0.93]} />
           )}
-          <Html center position={[0, labelY, 0]} distanceFactor={9} occlude={false} style={{ pointerEvents: 'none' }}>
-            <div className="space-bubble-label">{label}</div>
+          {/* label to the right — keeps the vertical list tight */}
+          <Html position={[isActor ? 0.5 : 0.42, 0, 0]} distanceFactor={9} occlude={false} style={{ pointerEvents: 'none' }}>
+            <div className="space-bubble-label space-bubble-label--right">{label}</div>
           </Html>
         </group>
       </Billboard>
@@ -112,56 +113,50 @@ function Bubble({ item, kind, position, onPick }) {
   );
 }
 
-// Candidates in a horizontal strip below the current film — drag to explore.
-function stripPositions(n) {
-  return Array.from({ length: n }, (_, i) => [(i - (n - 1) / 2) * SPACING, -1.7, 0]);
-}
-
-// The pannable world: lerps toward the player-driven pan target. No idle motion.
-function World({ pan, panX, children }) {
+// The vertical candidate column scrolls (player-driven). Anchored items live outside it.
+function ScrollColumn({ items, kind, onPickActor, onPickFilm, pan }) {
   const ref = useRef();
   useFrame(() => {
     if (!ref.current) return;
-    ref.current.position.x = THREE.MathUtils.lerp(ref.current.position.x, pan.tx, 0.16);
     ref.current.position.y = THREE.MathUtils.lerp(ref.current.position.y, pan.ty, 0.16);
+    ref.current.position.x = THREE.MathUtils.lerp(ref.current.position.x, pan.tx, 0.16);
   });
-  // expose clamp range via closure (panX) — used by the drag handler
-  void panX;
-  return <group ref={ref}>{children}</group>;
-}
-
-function Scene({ currentMovie, targetMovie, items, kind, onPickActor, onPickFilm, pan, panX }) {
-  const positions = useMemo(() => stripPositions(items.length), [items.length]);
-  const anchor = [0, -0.45, 0]; // bottom of the current movie card
+  const n = items.length;
+  const bottomY = COL_TOP - (n - 1) * SPACING_Y;
   return (
-    <World pan={pan} panX={panX}>
-      <Float />
-      <MovieGroup currentMovie={currentMovie} targetMovie={targetMovie} />
+    <group ref={ref}>
+      {/* spine: the path threading the list */}
+      <Line points={[[0, COL_TOP + 0.55, -0.06], [0, bottomY - 0.3, -0.06]]} color="#ffffff" lineWidth={0.7} transparent opacity={0.14} />
       {items.map((it, i) => (
-        <group key={it.id ?? i}>
-          <Line points={[anchor, positions[i]]} color="#ffffff" lineWidth={0.8} transparent opacity={0.18} />
-          <Bubble item={it} kind={kind} position={positions[i]} onPick={kind === 'actors' ? onPickActor : onPickFilm} />
-        </group>
+        <Bubble
+          key={it.id ?? i}
+          item={it}
+          kind={kind}
+          position={[0, COL_TOP - i * SPACING_Y, 0]}
+          onPick={kind === 'actors' ? onPickActor : onPickFilm}
+        />
       ))}
-    </World>
+    </group>
   );
 }
 
-// (kept as a no-op placeholder so the scene tree is stable; idle motion removed per design)
-function Float() { return null; }
-
-function MovieGroup({ currentMovie, targetMovie }) {
+function Scene({ currentMovie, targetMovie, items, kind, onPickActor, onPickFilm, pan }) {
   return (
     <>
       <color attach="background" args={['#05060a']} />
       <ambientLight intensity={1.5} />
-      <Stars radius={90} depth={50} count={1800} factor={3} saturation={0} fade speed={0.25} />
-      <group position={[0, 0.75, 0]}>
-        <MovieCard url={currentMovie?.poster_path ? POSTER_W + currentMovie.poster_path : null} scale={[1.6, 2.4]} />
+      <Stars radius={90} depth={50} count={1600} factor={3} saturation={0} fade speed={0.2} />
+
+      {/* anchored: target (top, dim, the goal) + current film below it.
+          Pulled forward in z so the scrolling cast pass BEHIND them. */}
+      <group position={[0, 3.0, 0.5]}>
+        <MovieCard url={targetMovie?.poster_path ? POSTER_W + targetMovie.poster_path : null} scale={[0.5, 0.75]} opacity={0.55} />
       </group>
-      <group position={[0, 3.0, -4]}>
-        <MovieCard url={targetMovie?.poster_path ? POSTER_W + targetMovie.poster_path : null} scale={[0.95, 1.42]} opacity={0.5} />
+      <group position={[0, 1.3, 0.7]}>
+        <MovieCard url={currentMovie?.poster_path ? POSTER_W + currentMovie.poster_path : null} scale={[1.05, 1.58]} />
       </group>
+
+      <ScrollColumn items={items} kind={kind} onPickActor={onPickActor} onPickFilm={onPickFilm} pan={pan} />
     </>
   );
 }
@@ -176,19 +171,17 @@ export default function SpaceBoard({
   const items = showFilms ? filmography : (cast || []);
   const kind = showFilms ? 'films' : 'actors';
 
-  // Player-driven pan target (drag to walk the map). No idle/auto motion.
   const pan = useRef({ tx: 0, ty: 0 }).current;
-  const panX = Math.max(0, ((items.length - 1) / 2) * SPACING + 0.4);
+  const scrollMax = Math.max(0, (items.length - 1) * SPACING_Y - 1.6);
 
-  // Re-center when the level changes (new movie / actor).
   useEffect(() => {
     pan.tx = 0; pan.ty = 0;
   }, [currentMovie?.id, selectedActor?.id, showFilms, pan]);
 
   const bind = useDrag(({ first, movement: [mx, my], memo }) => {
     if (first) memo = { x: pan.tx, y: pan.ty };
-    pan.tx = THREE.MathUtils.clamp(memo.x - mx * PAN_FACTOR, -panX, panX);
-    pan.ty = THREE.MathUtils.clamp(memo.y + my * PAN_FACTOR, -PAN_Y_LIMIT, PAN_Y_LIMIT);
+    pan.tx = THREE.MathUtils.clamp(memo.x + mx * PAN_X_FACTOR, -PAN_X_LIMIT, PAN_X_LIMIT);
+    pan.ty = THREE.MathUtils.clamp(memo.y - my * PAN_Y_FACTOR, 0, scrollMax);
     return memo;
   }, { filterTaps: true, pointer: { touch: true } });
 
@@ -203,7 +196,7 @@ export default function SpaceBoard({
 
   return (
     <div className="space-board" {...bind()} style={{ touchAction: 'none' }}>
-      <Canvas camera={{ position: [0, 0.2, 6], fov: 62 }} dpr={[1, 2]} gl={{ antialias: true, powerPreference: 'high-performance' }}>
+      <Canvas camera={{ position: [0, 0.4, 6], fov: 60 }} dpr={[1, 2]} gl={{ antialias: true, powerPreference: 'high-performance' }}>
         <Suspense fallback={null}>
           <Scene
             currentMovie={currentMovie}
@@ -213,10 +206,12 @@ export default function SpaceBoard({
             onPickActor={handleActorSelect}
             onPickFilm={handleFilmographySelect}
             pan={pan}
-            panX={panX}
           />
         </Suspense>
       </Canvas>
+
+      {/* left/right framing borders for the walk lane */}
+      <div className="space-rails" aria-hidden="true" />
 
       <div className="space-hud" aria-live="polite">
         <div className="space-hud-top">
@@ -234,7 +229,7 @@ export default function SpaceBoard({
               <button className="space-back-btn" onClick={() => gameDispatch({ type: 'DESELECT_ACTOR' })}>← back</button>
             </>
           ) : (
-            <span>{actorLoading ? 'Travelling…' : 'Drag to explore · tap to travel'}</span>
+            <span>{actorLoading ? 'Travelling…' : 'Scroll down · tap to travel'}</span>
           )}
         </div>
         <div className="space-hud-moves"><b>{movesRemaining}</b> moves left</div>
