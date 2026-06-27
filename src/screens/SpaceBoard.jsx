@@ -1,18 +1,22 @@
-import React, { Suspense, useRef, useState, useMemo } from 'react';
+import React, { Suspense, useRef, useState, useMemo, useEffect } from 'react';
 import * as THREE from 'three';
 import { Canvas, useFrame } from '@react-three/fiber';
 import { Stars, Image, Billboard, Line, Html, useTexture } from '@react-three/drei';
+import { useDrag } from '@use-gesture/react';
 import '../styles/space.css';
 
 // Space Mode — the flagship 3D "constellation" board.
-// Current film at center (rounded-rect), target glowing in the distance, cast as
-// round face-bubbles you tap to travel. Strings connect them. Falls back to
-// Classic on devices without WebGL.
-// NOTE: the "walking" motion model + dynamic-gradient compass land in the next pass.
+// No idle float / auto-camera: the PLAYER controls movement. Drag pans the world
+// like walking a character across a map (things shift the opposite way, new ones
+// come into view); tap a node to travel to it. The whole cast is laid out — drag
+// to explore it. Falls back to Classic without WebGL.
+// NOTE: travel-on-select animation + dynamic-gradient compass land in the next pass.
 
 const POSTER_W = 'https://image.tmdb.org/t/p/w342';
 const PROFILE_W = 'https://image.tmdb.org/t/p/w185';
-const MAX_BUBBLES = 5; // mobile-portrait fit; paging/scroll for the rest comes with the walk model
+const SPACING = 1.35;     // world units between candidates in the strip
+const PAN_FACTOR = 0.016; // screen px -> world units while dragging
+const PAN_Y_LIMIT = 1.6;
 
 function hasWebGL() {
   try {
@@ -21,14 +25,6 @@ function hasWebGL() {
   } catch {
     return false;
   }
-}
-
-function Float({ children, position = [0, 0, 0], speed = 1, amp = 0.06, phase = 0 }) {
-  const ref = useRef();
-  useFrame((s) => {
-    if (ref.current) ref.current.position.y = position[1] + Math.sin(s.clock.elapsedTime * speed + phase) * amp;
-  });
-  return <group ref={ref} position={position}>{children}</group>;
 }
 
 // Rounded-rectangle movie poster.
@@ -44,9 +40,8 @@ function MovieCard({ url, scale = [1.6, 2.4], opacity = 1 }) {
   return <Image url={url} scale={scale} radius={0.1} transparent opacity={opacity} />;
 }
 
-// Round, face-centered headshot: crop a square from the TOP of the portrait
-// (where faces sit) and mask it to a circle, with a faint rim for separation.
-function RoundHead({ url, radius = 0.34 }) {
+// Round, face-centered headshot: square-crop from the top of the portrait + circle mask.
+function RoundHead({ url, radius = 0.36 }) {
   const tex = useTexture(url);
   useMemo(() => {
     const img = tex.image;
@@ -71,7 +66,7 @@ function RoundHead({ url, radius = 0.34 }) {
   );
 }
 
-function InitialsHead({ label, radius = 0.34 }) {
+function InitialsHead({ label, radius = 0.36 }) {
   return (
     <group>
       <mesh>
@@ -92,10 +87,10 @@ function Bubble({ item, kind, position, onPick }) {
     ? (item.profile_path ? PROFILE_W + item.profile_path : null)
     : (item.poster_path ? POSTER_W + item.poster_path : null);
   const label = isActor ? item.name : item.title;
-  const labelY = isActor ? -0.56 : -0.78;
+  const labelY = isActor ? -0.58 : -0.8;
 
   return (
-    <Float position={position} speed={1.1} amp={0.05} phase={position[0] * 2}>
+    <group position={position}>
       <Billboard>
         <group
           scale={hovered ? 1.12 : 1}
@@ -106,59 +101,67 @@ function Bubble({ item, kind, position, onPick }) {
           {isActor ? (
             url ? <RoundHead url={url} /> : <InitialsHead label={label} />
           ) : (
-            <MovieCard url={url} scale={[0.72, 1.08]} />
+            <MovieCard url={url} scale={[0.74, 1.11]} />
           )}
           <Html center position={[0, labelY, 0]} distanceFactor={9} occlude={false} style={{ pointerEvents: 'none' }}>
             <div className="space-bubble-label">{label}</div>
           </Html>
         </group>
       </Billboard>
-    </Float>
+    </group>
   );
 }
 
-// Candidates fan out just below the current film. Consistent angular spacing,
-// centered regardless of count (so 2 items sit near center, not at the edges).
-function arcPositions(n, radius = 1.7, y = -1.7) {
-  const step = (Math.PI * 0.6) / 4;
-  return Array.from({ length: n }, (_, i) => {
-    const a = (i - (n - 1) / 2) * step;
-    return [Math.sin(a) * radius, y, Math.cos(a) * 0.5 - 0.3];
-  });
+// Candidates in a horizontal strip below the current film — drag to explore.
+function stripPositions(n) {
+  return Array.from({ length: n }, (_, i) => [(i - (n - 1) / 2) * SPACING, -1.7, 0]);
 }
 
-function CameraRig() {
-  useFrame((s) => {
-    s.camera.position.x = Math.sin(s.clock.elapsedTime * 0.08) * 0.6;
-    s.camera.position.y = 0.2 + Math.sin(s.clock.elapsedTime * 0.1) * 0.15;
-    s.camera.lookAt(0, 0.4, 0);
+// The pannable world: lerps toward the player-driven pan target. No idle motion.
+function World({ pan, panX, children }) {
+  const ref = useRef();
+  useFrame(() => {
+    if (!ref.current) return;
+    ref.current.position.x = THREE.MathUtils.lerp(ref.current.position.x, pan.tx, 0.16);
+    ref.current.position.y = THREE.MathUtils.lerp(ref.current.position.y, pan.ty, 0.16);
   });
-  return null;
+  // expose clamp range via closure (panX) — used by the drag handler
+  void panX;
+  return <group ref={ref}>{children}</group>;
 }
 
-function Scene({ currentMovie, targetMovie, items, kind, onPickActor, onPickFilm }) {
-  const positions = useMemo(() => arcPositions(items.length), [items.length]);
+function Scene({ currentMovie, targetMovie, items, kind, onPickActor, onPickFilm, pan, panX }) {
+  const positions = useMemo(() => stripPositions(items.length), [items.length]);
   const anchor = [0, -0.45, 0]; // bottom of the current movie card
+  return (
+    <World pan={pan} panX={panX}>
+      <Float />
+      <MovieGroup currentMovie={currentMovie} targetMovie={targetMovie} />
+      {items.map((it, i) => (
+        <group key={it.id ?? i}>
+          <Line points={[anchor, positions[i]]} color="#ffffff" lineWidth={0.8} transparent opacity={0.18} />
+          <Bubble item={it} kind={kind} position={positions[i]} onPick={kind === 'actors' ? onPickActor : onPickFilm} />
+        </group>
+      ))}
+    </World>
+  );
+}
+
+// (kept as a no-op placeholder so the scene tree is stable; idle motion removed per design)
+function Float() { return null; }
+
+function MovieGroup({ currentMovie, targetMovie }) {
   return (
     <>
       <color attach="background" args={['#05060a']} />
       <ambientLight intensity={1.5} />
-      <Stars radius={90} depth={50} count={1800} factor={3} saturation={0} fade speed={0.4} />
-
-      <Float position={[0, 0.75, 0]} speed={0.7} amp={0.1}>
+      <Stars radius={90} depth={50} count={1800} factor={3} saturation={0} fade speed={0.25} />
+      <group position={[0, 0.75, 0]}>
         <MovieCard url={currentMovie?.poster_path ? POSTER_W + currentMovie.poster_path : null} scale={[1.6, 2.4]} />
-      </Float>
-
-      <Float position={[0, 3.0, -4]} speed={0.5} amp={0.08}>
+      </group>
+      <group position={[0, 3.0, -4]}>
         <MovieCard url={targetMovie?.poster_path ? POSTER_W + targetMovie.poster_path : null} scale={[0.95, 1.42]} opacity={0.5} />
-      </Float>
-
-      {items.map((it, i) => (
-        <group key={it.id ?? i}>
-          <Line points={[anchor, positions[i]]} color="#ffffff" lineWidth={0.8} transparent opacity={0.2} />
-          <Bubble item={it} kind={kind} position={positions[i]} onPick={kind === 'actors' ? onPickActor : onPickFilm} />
-        </group>
-      ))}
+      </group>
     </>
   );
 }
@@ -170,10 +173,24 @@ export default function SpaceBoard({
 }) {
   const webgl = useMemo(hasWebGL, []);
   const showFilms = !!selectedActor && filmography.length > 0;
-  const all = showFilms ? filmography : (cast || []);
-  const items = all.slice(0, MAX_BUBBLES);
-  const more = Math.max(0, all.length - items.length);
+  const items = showFilms ? filmography : (cast || []);
   const kind = showFilms ? 'films' : 'actors';
+
+  // Player-driven pan target (drag to walk the map). No idle/auto motion.
+  const pan = useRef({ tx: 0, ty: 0 }).current;
+  const panX = Math.max(0, ((items.length - 1) / 2) * SPACING + 0.4);
+
+  // Re-center when the level changes (new movie / actor).
+  useEffect(() => {
+    pan.tx = 0; pan.ty = 0;
+  }, [currentMovie?.id, selectedActor?.id, showFilms, pan]);
+
+  const bind = useDrag(({ first, movement: [mx, my], memo }) => {
+    if (first) memo = { x: pan.tx, y: pan.ty };
+    pan.tx = THREE.MathUtils.clamp(memo.x - mx * PAN_FACTOR, -panX, panX);
+    pan.ty = THREE.MathUtils.clamp(memo.y + my * PAN_FACTOR, -PAN_Y_LIMIT, PAN_Y_LIMIT);
+    return memo;
+  }, { filterTaps: true, pointer: { touch: true } });
 
   if (!webgl) {
     return (
@@ -185,10 +202,9 @@ export default function SpaceBoard({
   }
 
   return (
-    <div className="space-board">
+    <div className="space-board" {...bind()} style={{ touchAction: 'none' }}>
       <Canvas camera={{ position: [0, 0.2, 6], fov: 62 }} dpr={[1, 2]} gl={{ antialias: true, powerPreference: 'high-performance' }}>
         <Suspense fallback={null}>
-          <CameraRig />
           <Scene
             currentMovie={currentMovie}
             targetMovie={targetMovie}
@@ -196,6 +212,8 @@ export default function SpaceBoard({
             kind={kind}
             onPickActor={handleActorSelect}
             onPickFilm={handleFilmographySelect}
+            pan={pan}
+            panX={panX}
           />
         </Suspense>
       </Canvas>
@@ -216,7 +234,7 @@ export default function SpaceBoard({
               <button className="space-back-btn" onClick={() => gameDispatch({ type: 'DESELECT_ACTOR' })}>← back</button>
             </>
           ) : (
-            <span>{actorLoading ? 'Travelling…' : 'Tap an actor to travel'}{more > 0 ? ` · +${more} more` : ''}</span>
+            <span>{actorLoading ? 'Travelling…' : 'Drag to explore · tap to travel'}</span>
           )}
         </div>
         <div className="space-hud-moves"><b>{movesRemaining}</b> moves left</div>
