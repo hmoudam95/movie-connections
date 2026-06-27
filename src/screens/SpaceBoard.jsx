@@ -15,7 +15,7 @@ import '../styles/space.css';
 
 const POSTER_W = 'https://image.tmdb.org/t/p/w342';
 const PROFILE_W = 'https://image.tmdb.org/t/p/w185';
-const SPACING_Y = 1.2;
+const SPACING_Y = 0.95;
 const HEAD_R = 0.36;
 const PAN_X_LIMIT = HEAD_R;
 const PAN_X_FACTOR = 0.005;
@@ -38,9 +38,9 @@ function rnd(s) { const x = Math.sin(s * 12.9898) * 43758.5453; return x - Math.
 // Forest scatter: each candidate gets a stable random x (within the lane) + depth.
 function forestPositions(n) {
   return Array.from({ length: n }, (_, i) => {
-    const x = (rnd(i * 1.37 + 0.1) - 0.5) * 1.8;
-    const y = COL_TOP - i * SPACING_Y - (rnd(i * 2.71 + 0.3) - 0.5) * 0.25;
-    const z = (rnd(i * 3.31 + 0.7) - 0.5) * 0.9;
+    const x = (rnd(i * 1.37 + 0.1) - 0.5) * 1.1;
+    const y = COL_TOP - i * SPACING_Y - (rnd(i * 2.71 + 0.3) - 0.5) * 0.16;
+    const z = (rnd(i * 3.31 + 0.7) - 0.5) * 0.5;
     return [x, y, z];
   });
 }
@@ -179,7 +179,8 @@ function Connectors({ bases, shared }) {
       <bufferGeometry>
         <bufferAttribute attach="attributes-position" array={positions} itemSize={3} count={bases.length * 2} />
       </bufferGeometry>
-      <lineBasicMaterial color="#ffffff" transparent opacity={0.11} />
+      {/* glow placeholder — per-string green→red route color lands with the distance engine */}
+      <lineBasicMaterial color="#5fe39a" transparent opacity={0.5} blending={THREE.AdditiveBlending} depthWrite={false} />
     </lineSegments>
   );
 }
@@ -209,7 +210,8 @@ function Scene({ currentMovie, targetMovie, items, kind, bases, onPickActor, onP
       <ambientLight intensity={1.5} />
       <Stars radius={90} depth={50} count={1600} factor={3} saturation={0} fade speed={0.2} />
       <Header currentMovie={currentMovie} targetMovie={targetMovie} shared={shared} />
-      <Connectors bases={bases} shared={shared} />
+      {/* strings only after a selection (films view) — keeps browsing clean */}
+      {kind === 'films' && <Connectors bases={bases} shared={shared} />}
       <ScrollColumn items={items} kind={kind} bases={bases} onPickActor={onPickActor} onPickFilm={onPickFilm} pan={pan} shared={shared} />
     </>
   );
