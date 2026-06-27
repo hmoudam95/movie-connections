@@ -1,6 +1,6 @@
 # Space Mode — Feasibility & Build Plan
 
-> Status: **feasibility approved, planning** · Owner decision: "Constrain + dynamic-gradient compass" · Last updated: 2026-06-26
+> Status: **BUILD STARTED (full build, no MVP)** · Locked: real 3D (react-three-fiber) + 2.5D auto-fallback · **Flagship from day one** · Constrain playable films + dynamic-gradient compass · Updated: 2026-06-27
 > Companion docs: [GAMEPLAY-REVIEW.md](./GAMEPLAY-REVIEW.md)
 
 A next-level, opt-in gameplay mode for Movie Connections: a spatial "space"-themed board where you travel from the start movie to the target through floating actor/movie bubbles, with the connecting strings glowing **greener the closer you are to the shortest path** and **redder the further you stray**.
@@ -43,8 +43,9 @@ Based on a multi-dimension feasibility study (algorithm, mobile rendering, inter
 
 - **Constrain the playable space to "notable" films** (the Neo4j / `vote_count`-threshold set). Makes colors always accurate, filmographies clean, and gives one difficulty knob. (Also the #1 fix from the gameplay review — Space mode pays down existing debt.)
 - **Color = a live, dynamic GRADIENT compass.** Continuous green→amber→red by closeness (see §5). *(Updated from an earlier 3-tier default per owner request.)*
-- **Coexist** as an opt-in mode — `SpaceBoard.jsx` sibling to `GameBoard.jsx`; never replace the proven daily/share board.
-- **Phase-1 defaults** (all easily changed): device floor iPhone 11+; cap the visible fan to ~12–18 top-billed bubbles with a "show more"; no Neo4j GDS dependency (batched Cypher `shortestPath` or a downloaded-adjacency BFS); distance field computed once per game from the static target.
+- **Flagship from day one** — Space Mode is the game's primary face; the clean puzzle board stays as a "Classic / simple" toggle. `SpaceBoard.jsx` becomes the default board.
+- **Real 3D via react-three-fiber / three.js**, engineered for 60fps on iPhone 11+ (capped node budget, instancing), with an **automatic 2.5D fallback** on low-capability devices — no corners on the journey, smooth for everyone.
+- **Defaults** (easily changed): cap the visible fan to ~12–18 top-billed bubbles with a "show more"; no Neo4j GDS dependency (batched Cypher `shortestPath` or a downloaded-adjacency BFS); distance field computed once per game from the static target.
 
 ---
 

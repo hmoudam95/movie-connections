@@ -6,6 +6,7 @@ import { useMovieAPI } from './hooks/useMovieAPI';
 import { useHintSystem } from './hooks/useHintSystem';
 import SetupScreen from './screens/SetupScreen';
 import GameBoard from './screens/GameBoard';
+import SpaceBoard from './screens/SpaceBoard';
 import VictoryScreen from './screens/VictoryScreen';
 import GameOverScreen from './screens/GameOverScreen';
 import CastOverlay from './components/CastOverlay';
@@ -28,6 +29,8 @@ function App() {
 
   const [dailyPreview, setDailyPreview] = useState(null);
   const [dailyStats, setDailyStats] = useState(() => getDailyStats());
+  // Space Mode is the flagship board; Classic is the opt-out.
+  const [boardMode, setBoardMode] = useState('space');
   const {
     loading: isLoading, randomLoading, actorLoading,
     hintLoading, targetCastLoading, error, randomError,
@@ -258,27 +261,44 @@ function App() {
               exit={{ opacity: 0, scale: 0.95, filter: 'blur(4px)' }}
               transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
             >
-              <GameBoard
-                currentMovie={currentMovie}
-                targetMovie={targetMovie}
-                gameChain={gameChain}
-                selectedActor={selectedActor}
-                cast={cast}
-                filmography={filmography}
-                cachedHintChain={cachedHintChain}
-                hintLevel={hintLevel}
-                hintsUsed={hintsUsed}
-                movesRemaining={movesRemaining}
-                movesUsed={movesUsed}
-                difficulty={difficulty}
-                actorLoading={actorLoading}
-                hintLoading={hintLoading}
-                pendingHintLevel={pendingHintLevel}
-                gameDispatch={gameDispatch}
-                handleActorSelect={handleActorSelect}
-                handleFilmographySelect={handleFilmographySelect}
-                handleHint={handleHint}
-              />
+              {boardMode === 'space' ? (
+                <SpaceBoard
+                  currentMovie={currentMovie}
+                  targetMovie={targetMovie}
+                  cast={cast}
+                  selectedActor={selectedActor}
+                  filmography={filmography}
+                  movesRemaining={movesRemaining}
+                  actorLoading={actorLoading}
+                  handleActorSelect={handleActorSelect}
+                  handleFilmographySelect={handleFilmographySelect}
+                  gameDispatch={gameDispatch}
+                  onSwitchToClassic={() => setBoardMode('classic')}
+                />
+              ) : (
+                <GameBoard
+                  currentMovie={currentMovie}
+                  targetMovie={targetMovie}
+                  gameChain={gameChain}
+                  selectedActor={selectedActor}
+                  cast={cast}
+                  filmography={filmography}
+                  cachedHintChain={cachedHintChain}
+                  hintLevel={hintLevel}
+                  hintsUsed={hintsUsed}
+                  movesRemaining={movesRemaining}
+                  movesUsed={movesUsed}
+                  difficulty={difficulty}
+                  actorLoading={actorLoading}
+                  hintLoading={hintLoading}
+                  pendingHintLevel={pendingHintLevel}
+                  gameDispatch={gameDispatch}
+                  handleActorSelect={handleActorSelect}
+                  handleFilmographySelect={handleFilmographySelect}
+                  handleHint={handleHint}
+                  onSwitchToSpace={() => setBoardMode('space')}
+                />
+              )}
             </motion.div>
           )}
           {gameState === 'complete' && (
