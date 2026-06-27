@@ -1,24 +1,27 @@
 import React, { Suspense, useRef, useState, useMemo, useEffect } from 'react';
 import * as THREE from 'three';
 import { Canvas, useFrame } from '@react-three/fiber';
-import { Stars, Image, Billboard, Line, Html, useTexture } from '@react-three/drei';
+import { Stars, Image, Billboard, Html, useTexture } from '@react-three/drei';
 import { useDrag } from '@use-gesture/react';
 import '../styles/space.css';
 
 // Space Mode — the flagship 3D "constellation" board.
-// The current film and target stay ANCHORED. The candidate list runs VERTICALLY
-// (you scroll down through it). Horizontal movement is tiny (≈ half a face) — a
-// parallax hint of a bigger walk. Drag to move, tap a node to travel. Side
-// borders frame the lane. Falls back to Classic without WebGL.
+// Candidates scatter like trees in a forest (random left/right/middle + depth);
+// you walk DOWN through them by scrolling (player-driven, no idle motion).
+// The current film + target stay anchored but COLLAPSE into a small top section
+// as you scroll down — strings emanate from that section to each candidate — and
+// grow back to full size when you scroll up. Tiny horizontal sway only. Tap to
+// travel. Falls back to Classic without WebGL.
 
 const POSTER_W = 'https://image.tmdb.org/t/p/w342';
 const PROFILE_W = 'https://image.tmdb.org/t/p/w185';
-const SPACING_Y = 1.25;      // vertical gap between candidates
+const SPACING_Y = 1.2;
 const HEAD_R = 0.36;
-const PAN_X_LIMIT = HEAD_R;  // "half a face" of horizontal sway
-const PAN_X_FACTOR = 0.005;  // very small horizontal response
-const PAN_Y_FACTOR = 0.013;  // vertical scroll response
-const COL_TOP = -0.2;        // y of the first candidate (just below current film)
+const PAN_X_LIMIT = HEAD_R;
+const PAN_X_FACTOR = 0.005;
+const PAN_Y_FACTOR = 0.013;
+const COL_TOP = -0.1;
+const COMPACT_AT = 1.2; // scroll distance over which the header fully compacts
 
 function hasWebGL() {
   try {
@@ -29,7 +32,20 @@ function hasWebGL() {
   }
 }
 
-function MovieCard({ url, scale = [1.3, 1.95], opacity = 1 }) {
+// deterministic pseudo-random in [0,1)
+function rnd(s) { const x = Math.sin(s * 12.9898) * 43758.5453; return x - Math.floor(x); }
+
+// Forest scatter: each candidate gets a stable random x (within the lane) + depth.
+function forestPositions(n) {
+  return Array.from({ length: n }, (_, i) => {
+    const x = (rnd(i * 1.37 + 0.1) - 0.5) * 1.8;
+    const y = COL_TOP - i * SPACING_Y - (rnd(i * 2.71 + 0.3) - 0.5) * 0.25;
+    const z = (rnd(i * 3.31 + 0.7) - 0.5) * 0.9;
+    return [x, y, z];
+  });
+}
+
+function MovieCard({ url, scale = [1.05, 1.58], opacity = 1 }) {
   if (!url) {
     return (
       <mesh>
@@ -41,7 +57,6 @@ function MovieCard({ url, scale = [1.3, 1.95], opacity = 1 }) {
   return <Image url={url} scale={scale} radius={0.1} transparent opacity={opacity} />;
 }
 
-// Round, face-centered headshot.
 function RoundHead({ url, radius = HEAD_R }) {
   const tex = useTexture(url);
   useMemo(() => {
@@ -103,8 +118,7 @@ function Bubble({ item, kind, position, onPick }) {
           ) : (
             <MovieCard url={url} scale={[0.62, 0.93]} />
           )}
-          {/* label to the right — keeps the vertical list tight */}
-          <Html position={[isActor ? 0.5 : 0.42, 0, 0]} distanceFactor={9} occlude={false} style={{ pointerEvents: 'none' }}>
+          <Html position={[isActor ? 0.46 : 0.4, 0, 0]} distanceFactor={9} occlude={false} style={{ pointerEvents: 'none' }}>
             <div className="space-bubble-label space-bubble-label--right">{label}</div>
           </Html>
         </group>
@@ -113,50 +127,90 @@ function Bubble({ item, kind, position, onPick }) {
   );
 }
 
-// The vertical candidate column scrolls (player-driven). Anchored items live outside it.
-function ScrollColumn({ items, kind, onPickActor, onPickFilm, pan }) {
+// Collapsing header: current film + target shrink toward a compact top section as
+// you scroll down (compactT from the live scroll), and grow back when you scroll up.
+function Header({ currentMovie, targetMovie, shared }) {
+  const curRef = useRef();
+  const tgtRef = useRef();
+  const L = THREE.MathUtils.lerp;
+  useFrame(() => {
+    const t = THREE.MathUtils.clamp(shared.scrollY / COMPACT_AT, 0, 1);
+    if (curRef.current) {
+      curRef.current.scale.setScalar(L(1, 0.42, t));
+      curRef.current.position.set(L(0, -0.62, t), L(1.3, 2.0, t), 0.7);
+    }
+    if (tgtRef.current) {
+      tgtRef.current.scale.setScalar(L(1, 0.62, t));
+      tgtRef.current.position.set(L(0, 0.62, t), L(3.0, 2.04, t), 0.5);
+    }
+    // anchor where the strings originate (bottom of the section)
+    shared.anchor.set(0, L(0.45, 1.62, t), 0.4);
+  });
+  return (
+    <>
+      <group ref={tgtRef}>
+        <MovieCard url={targetMovie?.poster_path ? POSTER_W + targetMovie.poster_path : null} scale={[0.5, 0.75]} opacity={0.55} />
+      </group>
+      <group ref={curRef}>
+        <MovieCard url={currentMovie?.poster_path ? POSTER_W + currentMovie.poster_path : null} scale={[1.05, 1.58]} />
+      </group>
+    </>
+  );
+}
+
+// Dynamic strings from the (moving) header anchor to every candidate's live position.
+function Connectors({ bases, shared }) {
+  const ref = useRef();
+  const positions = useMemo(() => new Float32Array(bases.length * 6), [bases.length]);
+  useFrame(() => {
+    const a = shared.anchor;
+    for (let i = 0; i < bases.length; i++) {
+      positions[i * 6 + 0] = a.x;
+      positions[i * 6 + 1] = a.y;
+      positions[i * 6 + 2] = a.z;
+      positions[i * 6 + 3] = bases[i][0] + shared.scrollX;
+      positions[i * 6 + 4] = bases[i][1] + shared.scrollY;
+      positions[i * 6 + 5] = bases[i][2];
+    }
+    if (ref.current) ref.current.geometry.attributes.position.needsUpdate = true;
+  });
+  return (
+    <lineSegments ref={ref} frustumCulled={false}>
+      <bufferGeometry>
+        <bufferAttribute attach="attributes-position" array={positions} itemSize={3} count={bases.length * 2} />
+      </bufferGeometry>
+      <lineBasicMaterial color="#ffffff" transparent opacity={0.11} />
+    </lineSegments>
+  );
+}
+
+function ScrollColumn({ items, kind, bases, onPickActor, onPickFilm, pan, shared }) {
   const ref = useRef();
   useFrame(() => {
     if (!ref.current) return;
     ref.current.position.y = THREE.MathUtils.lerp(ref.current.position.y, pan.ty, 0.16);
     ref.current.position.x = THREE.MathUtils.lerp(ref.current.position.x, pan.tx, 0.16);
+    shared.scrollX = ref.current.position.x;
+    shared.scrollY = ref.current.position.y;
   });
-  const n = items.length;
-  const bottomY = COL_TOP - (n - 1) * SPACING_Y;
   return (
     <group ref={ref}>
-      {/* spine: the path threading the list */}
-      <Line points={[[0, COL_TOP + 0.55, -0.06], [0, bottomY - 0.3, -0.06]]} color="#ffffff" lineWidth={0.7} transparent opacity={0.14} />
       {items.map((it, i) => (
-        <Bubble
-          key={it.id ?? i}
-          item={it}
-          kind={kind}
-          position={[0, COL_TOP - i * SPACING_Y, 0]}
-          onPick={kind === 'actors' ? onPickActor : onPickFilm}
-        />
+        <Bubble key={it.id ?? i} item={it} kind={kind} position={bases[i]} onPick={kind === 'actors' ? onPickActor : onPickFilm} />
       ))}
     </group>
   );
 }
 
-function Scene({ currentMovie, targetMovie, items, kind, onPickActor, onPickFilm, pan }) {
+function Scene({ currentMovie, targetMovie, items, kind, bases, onPickActor, onPickFilm, pan, shared }) {
   return (
     <>
       <color attach="background" args={['#05060a']} />
       <ambientLight intensity={1.5} />
       <Stars radius={90} depth={50} count={1600} factor={3} saturation={0} fade speed={0.2} />
-
-      {/* anchored: target (top, dim, the goal) + current film below it.
-          Pulled forward in z so the scrolling cast pass BEHIND them. */}
-      <group position={[0, 3.0, 0.5]}>
-        <MovieCard url={targetMovie?.poster_path ? POSTER_W + targetMovie.poster_path : null} scale={[0.5, 0.75]} opacity={0.55} />
-      </group>
-      <group position={[0, 1.3, 0.7]}>
-        <MovieCard url={currentMovie?.poster_path ? POSTER_W + currentMovie.poster_path : null} scale={[1.05, 1.58]} />
-      </group>
-
-      <ScrollColumn items={items} kind={kind} onPickActor={onPickActor} onPickFilm={onPickFilm} pan={pan} />
+      <Header currentMovie={currentMovie} targetMovie={targetMovie} shared={shared} />
+      <Connectors bases={bases} shared={shared} />
+      <ScrollColumn items={items} kind={kind} bases={bases} onPickActor={onPickActor} onPickFilm={onPickFilm} pan={pan} shared={shared} />
     </>
   );
 }
@@ -170,13 +224,13 @@ export default function SpaceBoard({
   const showFilms = !!selectedActor && filmography.length > 0;
   const items = showFilms ? filmography : (cast || []);
   const kind = showFilms ? 'films' : 'actors';
+  const bases = useMemo(() => forestPositions(items.length), [items.length]);
 
   const pan = useRef({ tx: 0, ty: 0 }).current;
-  const scrollMax = Math.max(0, (items.length - 1) * SPACING_Y - 1.6);
+  const shared = useRef({ anchor: new THREE.Vector3(0, 0.45, 0.4), scrollX: 0, scrollY: 0 }).current;
+  const scrollMax = Math.max(0, (items.length - 1) * SPACING_Y - 1.4);
 
-  useEffect(() => {
-    pan.tx = 0; pan.ty = 0;
-  }, [currentMovie?.id, selectedActor?.id, showFilms, pan]);
+  useEffect(() => { pan.tx = 0; pan.ty = 0; }, [currentMovie?.id, selectedActor?.id, showFilms, pan]);
 
   const bind = useDrag(({ first, movement: [mx, my], memo }) => {
     if (first) memo = { x: pan.tx, y: pan.ty };
@@ -203,14 +257,15 @@ export default function SpaceBoard({
             targetMovie={targetMovie}
             items={items}
             kind={kind}
+            bases={bases}
             onPickActor={handleActorSelect}
             onPickFilm={handleFilmographySelect}
             pan={pan}
+            shared={shared}
           />
         </Suspense>
       </Canvas>
 
-      {/* left/right framing borders for the walk lane */}
       <div className="space-rails" aria-hidden="true" />
 
       <div className="space-hud" aria-live="polite">
